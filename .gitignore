@@ -5,6 +5,7 @@
 /storage/
 /modules/CloudFile/cache/
 config.inc.php
+config.inc.php.orig
 config.template.php
 config.performance.php
 config.db.php
