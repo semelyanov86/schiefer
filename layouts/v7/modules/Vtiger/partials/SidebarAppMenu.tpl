@@ -19,12 +19,30 @@
 		{assign var=USER_PRIVILEGES_MODEL value=Users_Privileges_Model::getCurrentUserPrivilegesModel()}
 		{assign var=HOME_MODULE_MODEL value=Vtiger_Module_Model::getInstance('Home')}
 		{assign var=DASHBOARD_MODULE_MODEL value=Vtiger_Module_Model::getInstance('Dashboard')}
+		{assign var=CONTACTS_MODULE_MODEL value=Vtiger_Module_Model::getInstance('Contacts')}
+		{assign var=PBXMANAGER_MODULE_MODEL value=Vtiger_Module_Model::getInstance('PBXManager')}
 		<div class="app-list row">
 			{if $USER_PRIVILEGES_MODEL->hasModulePermission($DASHBOARD_MODULE_MODEL->getId())}
 				<div class="menu-item app-item dropdown-toggle" data-default-url="{$HOME_MODULE_MODEL->getDefaultUrl()}">
 					<div class="menu-items-wrapper">
 						<span class="app-icon-list fa fa-dashboard"></span>
 						<span class="app-name textOverflowEllipsis"> {vtranslate('LBL_DASHBOARD',$MODULE)}</span>
+					</div>
+				</div>
+			{/if}
+			{if $USER_PRIVILEGES_MODEL->hasModulePermission($CONTACTS_MODULE_MODEL->getId())}
+				<div class="menu-item app-item dropdown-toggle" data-default-url="{$CONTACTS_MODULE_MODEL->getDefaultUrl()}">
+					<div class="menu-items-wrapper">
+						<span class="vicon-contacts"></span>
+						<span class="app-name textOverflowEllipsis"> {vtranslate('Contacts','Contacts')}</span>
+					</div>
+				</div>
+			{/if}
+			{if $USER_PRIVILEGES_MODEL->hasModulePermission($PBXMANAGER_MODULE_MODEL->getId())}
+				<div class="menu-item app-item dropdown-toggle" data-default-url="{$PBXMANAGER_MODULE_MODEL->getDefaultUrl()}">
+					<div class="menu-items-wrapper">
+						<span class="vicon-pbxmanager"></span>
+						<span class="app-name textOverflowEllipsis"> {vtranslate('PBXManager','PBXManager')}</span>
 					</div>
 				</div>
 			{/if}
