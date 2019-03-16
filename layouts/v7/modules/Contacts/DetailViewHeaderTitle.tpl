@@ -32,7 +32,7 @@
 			<div class="info-row">
 			   <h4>
 				  <span class="recordLabel  pushDown" title="{$RECORD->getDisplayValue('salutationtype')}&nbsp;{$RECORD->getName()}">
-					  <a href="http://sams.schiefer.co/kunden/{$RECORD->get('cf_1137')}">
+					  <a href="http://sams.schiefer.co/kunden/{$RECORD->get('cf_1137')}" target="_blank">
 					 {assign var=COUNTER value=0}
 					 {foreach item=NAME_FIELD from=$MODULE_MODEL->getNameFields()}
 						{assign var=FIELD_MODEL value=$MODULE_MODEL->getField($NAME_FIELD)}
