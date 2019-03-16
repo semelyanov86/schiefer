@@ -32,6 +32,7 @@
 			<div class="info-row">
 			   <h4>
 				  <span class="recordLabel  pushDown" title="{$RECORD->getDisplayValue('salutationtype')}&nbsp;{$RECORD->getName()}">
+					  <a href="http://sams.schiefer.co/kunden/{$RECORD->get('cf_1137')}">
 					 {assign var=COUNTER value=0}
 					 {foreach item=NAME_FIELD from=$MODULE_MODEL->getNameFields()}
 						{assign var=FIELD_MODEL value=$MODULE_MODEL->getField($NAME_FIELD)}
@@ -45,6 +46,7 @@
 						   {if $COUNTER eq 0 && ($RECORD->get($NAME_FIELD))}&nbsp;{assign var=COUNTER value=$COUNTER+1}{/if}
 						{/if}
 					 {/foreach}
+					  </a>
 				  </span>
 			   </h4>
 			</div>
