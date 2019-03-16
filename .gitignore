@@ -1,0 +1,10 @@
+/logs/
+/.idea/
+/cache/
+/backup/
+/storage/
+/modules/CloudFile/cache/
+config.inc.php
+config.template.php
+config.performance.php
+config.db.php
