@@ -167,8 +167,14 @@
 			var lang = o.language;
 			if (!dates[lang]){
 				lang = lang.split('-')[0];
-				if (!dates[lang])
+				if (!dates[lang]) {
 					lang = defaults.language;
+				}
+				if (!dates[lang]) {
+					for(const key in dates) {
+						lang = key;
+					}
+				}
 			}
 			o.language = lang;
 
