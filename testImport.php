@@ -26,9 +26,12 @@ if ($dataString) {
     $iterate = 0;
     foreach ($textArr as $text) {
         $iterate++;
+        if (!$configs[1] || empty($configs[1])) {
+            continue;
+        }
         try {
             $tmpval = $text[0];
-            $q = "SELECT * FROM Contacts WHERE $configs[0] LIKE '%$tmpval%'";
+            $q = "SELECT * FROM Contacts WHERE $configs[0] = '$tmpval'";
             $q = $q . ';'; // NOTE: Make sure to terminate query with ;
             $records = vtws_query($q, $current_user);
             if (count($records) > 0) {
@@ -72,9 +75,9 @@ if ($dataString) {
                 var_dump($ex->getMessage(), $dataArr);
             }
         }
+        echo $iterate . '<br>';
     }
-
-
+    var_dump($textArr, $contact);
 
 }
 //$dos2unix = exec("dos2unix -iso -n import/25-03-2019.txt storage/25.txt");

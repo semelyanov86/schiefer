@@ -66,6 +66,7 @@ var Vtiger_PBXManager_Js = {
 	 * Function display the PBX popup
 	 */
 	showPBXIncomingCallPopup : function(record) {
+		return false;
             // Salesplatform.ru begin PBXManager porting
             var contactFieldStyle = ((record.customer != null && record.customer != '') ? 'hide' : '');
             //SalesPlatform.ru end PBXManager porting
