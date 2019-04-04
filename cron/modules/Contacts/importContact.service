@@ -19,61 +19,61 @@ $numericFields = array('cf_1109', 'cf_1127', 'cf_1113', 'cf_1121', 'cf_1115', 'c
 $date = date('d-m-Y');
 $dos2unix = exec("dos2unix -iso -n import/" . $date . ".txt storage/" . $date . ".txt");
 $dataString = file_get_contents_utf8("storage/$date.txt");
-$textArr = splitDocument($dataString);
-$current_user = CRMEntity::getInstance('Users');
-$current_user->retrieveCurrentUserInfoFromFile(1);
-foreach ($textArr as $text) {
-    try {
-        $q = "SELECT * FROM Contacts WHERE $configs[0] LIKE $text[0]";
-        $q = $q . ';'; // NOTE: Make sure to terminate query with ;
-        $records = vtws_query($q, $current_user);
-        if (count($records) > 0) {
-            $wsid = $records[0]['id'];
+if ($dataString) {
+    $textArr = splitDocument($dataString);
+    $current_user = CRMEntity::getInstance('Users');
+    $current_user->retrieveCurrentUserInfoFromFile(1);
+    foreach ($textArr as $text) {
+        if (!$configs[1] || empty($configs[1])) {
+            continue;
+        }
+        try {
+            $tmpval = $text[0];
+            $q = "SELECT * FROM Contacts WHERE $configs[0] = '$tmpval'";
+            $q = $q . ';'; // NOTE: Make sure to terminate query with ;
+            $records = vtws_query($q, $current_user);
+            if (count($records) > 0) {
+                $wsid = $records[0]['id'];
+            } else {
+                $wsid = false;
+            }
+        } catch (WebServiceException $ex) {
+            var_dump($ex->getMessage(), $q);
+        }
+        if ($wsid) {
+            try {
+                $dataArr = array('id' => $wsid);
+                for ($i = 0; $i < count($configs); $i++) {
+                    if (in_array($configs[$i], $numericFields)) {
+                        $tmpString = str_replace('.', '', $text[$i]);
+                        $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
+                    } else {
+                        $dataArr[$configs[$i]] = $text[$i];
+                    }
+                }
+                $contact = vtws_revise($dataArr, $current_user);
+            } catch (WebServiceException $ex) {
+                var_dump($ex->getMessage(), $dataArr);
+            }
         } else {
-            $wsid = false;
-        }
-    } catch (WebServiceException $ex) {
-        echo $ex->getMessage();
-    }
-    if ($wsid) {
-        try {
-            $dataArr = array('id' => $wsid);
-            for ($i = 0; $i < count($configs); $i++) {
-                if (in_array($configs[$i], $numericFields)) {
-//                    $dataArr[$configs[$i]] = number_format($text[$i], 2, ',', '');
-                    $tmpString = str_replace('.', '', $text[$i]);
-                    $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
-                } else {
-                    $dataArr[$configs[$i]] = $text[$i];
+            try {
+                $dataArr = array('assigned_user_id' => '19x1');
+                for ($i = 0; $i < count($configs); $i++) {
+                    if (in_array($configs[$i], $numericFields)) {
+                        $tmpString = str_replace('.', '', $text[$i]);
+                        $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
+                    } else {
+                        $dataArr[$configs[$i]] = $text[$i];
+                    }
                 }
+                $contact = vtws_create('Contacts', $dataArr, $current_user);
+            } catch (WebServiceException $ex) {
+                var_dump($ex->getMessage(), $dataArr);
             }
-            $contact = vtws_revise($dataArr, $current_user);
-
-        } catch (WebServiceException $ex) {
-            echo $ex->getMessage();
-        }
-    } else {
-        try {
-            $dataArr = array();
-            for ($i = 0; $i < count($configs); $i++) {
-                if (in_array($configs[$i], $numericFields)) {
-//                    $dataArr[$configs[$i]] = number_format($text[$i], 2, ',', '');
-                    $tmpString = str_replace('.', '', $text[$i]);
-                    $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
-                } else {
-                    $dataArr[$configs[$i]] = $text[$i];
-                }
-            }
-            $contact = vtws_create('Contacts', $dataArr, $current_user);
-
-        } catch (WebServiceException $ex) {
-            echo $ex->getMessage();
         }
     }
-
-
 }
-//$dos2unix = exec("dos2unix -iso -n import/25-03-2019.txt storage/25.txt");
+unlink('storage/' . $date . '.txt');
 echo 'DONE!';
 
 

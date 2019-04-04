@@ -75,9 +75,7 @@ if ($dataString) {
                 var_dump($ex->getMessage(), $dataArr);
             }
         }
-        echo $iterate . '<br>';
     }
-    var_dump($textArr, $contact);
 
 }
 //$dos2unix = exec("dos2unix -iso -n import/25-03-2019.txt storage/25.txt");
