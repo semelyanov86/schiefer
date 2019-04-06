@@ -50,6 +50,7 @@
     >
 {*        {$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'), $RECORD->getId(), $RECORD)}*}
 {else}
-    <div style="border: thin dashed #52caf9; padding: {if $FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}3px 10px 3px 10px; {else} 10px 10px 10px 10px; {/if}">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'), $RECORD->getId(), $RECORD)}</div>
+{*    padding: {if $FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}3px 10px 3px 10px; {else} 10px 10px 10px 10px; {/if}*}
+    <div style="border: 1px solid #cccccc; width: 200px; height: 30px; padding-top: 5px; padding-left:5px;">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'), $RECORD->getId(), $RECORD)}</div>
 
 {/if}
