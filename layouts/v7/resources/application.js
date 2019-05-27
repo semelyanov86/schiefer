@@ -491,7 +491,7 @@ window.app = (function () {
 			}
 
 			return displayValue;
-		}
+		},
 
 	}
 })();
@@ -545,3 +545,7 @@ jQuery(function () {
         }, false);
         // SalesPlatform.ru end
 });
+
+function askForNotify() {
+	Push.create('Grant privileges accepted');
+}

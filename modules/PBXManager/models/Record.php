@@ -78,7 +78,9 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
                 $fieldValue = $details[$fieldName];
                 $recordModel->set($fieldName, $fieldValue);
         }
-        return $moduleModel->saveRecord($recordModel);
+        $model = $moduleModel->saveRecord($recordModel);
+//        self::checkDublicates($model->getId());
+        return $model;
     }
     
     /**
@@ -112,6 +114,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         // SalesPlatform.ru end
         
         $db->pquery($query, $params);
+//        self::checkDublicatesByUUID($sourceuuid);
         return true;
     }
     
@@ -171,6 +174,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $db = PearDatabase::getInstance();
         $query = 'UPDATE '.self::moduletableName.' SET recordingurl=? WHERE sourceuuid=?';
         $db->pquery($query, array($recordingUrl, $sourceuuid));
+//        self::checkDublicatesByUUID($sourceuuid);
     }
     
     /**
@@ -185,6 +189,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $params = array($sourceuuid);
         $result = $db->pquery($query, $params);
         $rowCount =  $db->num_rows($result);
+//        self::checkDublicatesByUUID($sourceuuid);
         if($rowCount){
             $rowData = $db->query_result_rowdata($result, 0);
             $record = new self();
@@ -214,6 +219,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $params[] = $recordId;
         
         $db->pquery($query, $params);
+//        self::checkDublicates($recordId);
     }
     
     public static function updateCallDetailsBySourceUUID($sourceuuid, $details) {
@@ -229,6 +235,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $params[] = $sourceuuid;
         
         $db->pquery($query, $params);
+//        self::checkDublicatesByUUID($sourceuuid);
     }
     //SalesPlatform.ru end
     
@@ -419,87 +426,69 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
     /**
      * Function to save the current Record Model. Function rewrote by Sergey Emelyanov. It deletes previous PBXRecord to prevent dublicates
      */
-    public function save() {
-        global $adb;
-        $status = $this->get('callstatus');
-        $sourceid = $this->get('sourceuuid');
-        $number = $this->get('customernumber');
-        if (true) {
-            $query="select vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanagercf.cf_1250 from vtiger_pbxmanager inner join vtiger_crmentity on vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid inner join vtiger_pbxmanagercf on vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid where vtiger_crmentity.deleted=0 and  vtiger_pbxmanager.sourceuuid = ?";
-            $result = $adb->pquery($query, array($sourceid));
-            if($adb->num_rows($result) >= 1){
-                while($result_set = $adb->fetch_array($result))
-                {
-                    $previd = $result_set["pbxmanagerid"];
-                    $leadid = false;
-                    $prevModel = PBXManager_Record_Model::getInstanceById($previd);
-                    if ($prevModel->get('callstatus') === 'no-answer') {
-                        $leadid = $result_set["cf_1250"];
-                        $prevModel->delete();
-                    } elseif ($prevModel->get('callstatus') === 'completed') {
-                        return false;
-                    }
-                    if ($leadid){
-                        $this->deleteLeadById($leadid);
-                    }
-                }
-            } else {
-                $query = "SELECT vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanager.customernumber, vtiger_pbxmanagercf.cf_1250, vtiger_pbxmanager.callstatus FROM vtiger_pbxmanager INNER JOIN vtiger_crmentity on vtiger_pbxmanager.pbxmanagerid=vtiger_crmentity.crmid INNER JOIN vtiger_pbxmanagercf ON vtiger_pbxmanagercf.pbxmanagerid = vtiger_pbxmanager.pbxmanagerid ORDER BY vtiger_pbxmanager.pbxmanagerid DESC LIMIT 3";
-                $result = $adb->pquery($query, array());
-                if($adb->num_rows($result) >= 1){
-                    while($result_set = $adb->fetch_array($result))
-                    {
-                        $previd = $result_set["pbxmanagerid"];
-                        $prevNumber = $result_set['customernumber'];
-                        $status = $result_set['callstatus'];
-                        $leadid = false;
-                        if ($status === 'no-answer' && $prevNumber === $number) {
-                            $prevModel = PBXManager_Record_Model::getInstanceById($previd);
-                            $leadid = $result_set["cf_1250"];
-                            $prevModel->delete();
-                        } elseif ($status === 'completed' && $prevNumber === $number) {
-                            return false;
-                        }
-                        if ($leadid){
-                            $this->deleteLeadById($leadid);
-                        }
-                    }
-                }
-            }
-            $noAnswerLead = $this->createLeadRecord();
-            $this->getModule()->saveRecord($this);
-        } else {
-            $this->getModule()->saveRecord($this);
-        }
-    }
+/*    public function save() {
+        self::checkDublicates();
+        $this->getModule()->saveRecord($this);
+    }*/
 
     /*
      * Function created Lead Record if current call status is 'No Answer.
      * return Lead model
      */
-    public function createLeadRecord()
+    public static function createLeadRecord($pbxInstance)
     {
-        $number = $this->get('customernumber');
+        $number = $pbxInstance->get('customernumber');
+        $curCustomer = $pbxInstance->get('customer');
+        if ($curCustomer) {
+            $customerModel = Vtiger_Record_Model::getInstanceById($curCustomer);
+            $customerName = $customerModel->getName();
+        } else {
+            $customerName = "Missed Call";
+        }
         $leadModel = Vtiger_Record_Model::getCleanInstance('Leads');
         $leadModel->set('mode', 'create');
-        $leadModel->set('lastname', 'Missed Call');
+        $leadModel->set('lastname', $customerName);
+        $leadModel->set('assigned_user_id', '1');
         $leadModel->set('phone', $number);
-        $leadModel->set('description', $this->get('sourceuuid'));
+        $leadModel->set('description', $pbxInstance->get('sourceuuid'));
         $leadModel->save();
-        $this->set('cf_1250', $leadModel->getId());
-        if (!$this->get('customer')) {
-            $this->set('customer', $leadModel->getId());
+        $pbxInstance->set('cf_1250', $leadModel->getId());
+        $pbxInstance->set('mode', 'edit');
+        if (!$curCustomer) {
+            $pbxInstance->set('customer', $leadModel->getId());
         }
+        $pbxInstance->save();
         return $leadModel;
 
     }
-    
+
+    public static function checkDublicatesByUUID($uuid)
+    {
+        global $log;
+        $db = PearDatabase::getInstance();
+        $pbxId = false;
+        $query="select vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanagercf.cf_1250 from vtiger_pbxmanager inner join vtiger_crmentity on vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid inner join vtiger_pbxmanagercf on vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid where vtiger_crmentity.deleted=0 and  vtiger_pbxmanager.sourceuuid = ?  and vtiger_pbxmanager.callstatus IN (?,?,?)";
+        if ($uuid) {
+            $log->debug("SEM: Runned query - " . $query);
+            $result = $db->pquery($query, array($uuid, 'Answered elsewhere', 'no-answer', 'in-progress'));
+            $log->debug('SEM: params for query - ' . $uuid . ' Answered elsewhere ' . ' no-answer ' . ' in-progress');
+            $count = $db->num_rows($result);
+            for($i=0; $i<$count; $i++){
+                $pbxId = $db->query_result($result, $i, 'pbxmanagerid');
+
+            }
+            if ($pbxId) {
+                self::checkDublicates($pbxId);
+            }
+        }
+    }
+
     /*
      * Function deletes Lead Record by id
      * @param int Lead id
      * return boolean depend on successful implementation.
      */
-    private function deleteLeadById($leadid)
+    public static function deleteLeadById($leadid)
     {
         if (!$leadid) {
             return false;
@@ -511,6 +500,84 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         } else {
             return false;
         }
+    }
+
+    public static function checkDublicates($id = false)
+    {
+        global $adb;
+        global $log;
+        if ($id) {
+            $pbxInstance = Vtiger_Record_Model::getInstanceById($id);
+        } else {
+//            $pbxInstance = $this;
+            return false;
+        }
+        $status = $pbxInstance->get('callstatus');
+        $sourceid = $pbxInstance->get('sourceuuid');
+        $number = $pbxInstance->get('customernumber');
+        if ($status === 'no-answer') {
+            $noAnswerLead = self::createLeadRecord($pbxInstance);
+        }
+        if ($sourceid) {
+            $query="select vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanagercf.cf_1250 from vtiger_pbxmanager inner join vtiger_crmentity on vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid inner join vtiger_pbxmanagercf on vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid where vtiger_crmentity.deleted=0 and  vtiger_pbxmanager.sourceuuid = ?";
+            $log->debug("SEM: Runned query - " . $query);
+            $result = $adb->pquery($query, array($sourceid));
+            $log->debug('SEM: params for query - ' . $sourceid);
+            if($adb->num_rows($result) > 1){
+                while($result_set = $adb->fetch_array($result))
+                {
+                    $previd = $result_set["pbxmanagerid"];
+                    $log->debug("SEM: working with id - " . $previd . " And curid - " . $id);
+                    $leadid = false;
+                    if ($previd != $id) {
+                        $prevModel = Vtiger_Record_Model::getInstanceById($previd);
+                        if ($prevModel->get('callstatus') && $prevModel->get('callstatus') === 'completed') {
+                            continue;
+                        } else {
+                            $leadid = $result_set["cf_1250"];
+                            $log->debug("SEM: removed PBX Entity by UUID - " . $previd . ' with callstatus ' . $prevModel->get('callstatus'));
+                            $prevModel->delete();
+                        }
+                    }
+                    if ($leadid){
+                        $log->debug("SEM: removed Lead by UUID - " . $previd);
+                        self::deleteLeadById($leadid);
+                    }
+                }
+            }
+        }
+
+            $query = "SELECT vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanager.customernumber, vtiger_pbxmanagercf.cf_1250, vtiger_pbxmanager.callstatus FROM vtiger_pbxmanager INNER JOIN vtiger_crmentity on vtiger_pbxmanager.pbxmanagerid=vtiger_crmentity.crmid INNER JOIN vtiger_pbxmanagercf ON vtiger_pbxmanagercf.pbxmanagerid = vtiger_pbxmanager.pbxmanagerid ORDER BY vtiger_pbxmanager.pbxmanagerid DESC LIMIT 30";
+        $log->debug("SEM: Runned query - " . $query);
+            $result = $adb->pquery($query, array());
+            if($adb->num_rows($result) > 1){
+                while($result_set = $adb->fetch_array($result))
+                {
+                    $previd = $result_set["pbxmanagerid"];
+                    $prevNumber = $result_set['customernumber'];
+                    $status = $result_set['callstatus'];
+                    $log->debug("SEM: working with id - " . $previd . " And curid - " . $id);
+                    $leadid = false;
+                    if ($previd == $id) {
+                        continue;
+                    }
+                    if ($prevNumber == $number) {
+                        if ($status === 'completed') {
+                            continue;
+                        } else {
+                            $log->debug("SEM: removed PBX Entity - " . $previd . ' with callstatus ' . $prevModel->get('callstatus'));
+                            $prevModel = Vtiger_Record_Model::getInstanceById($previd);
+                            $leadid = $result_set["cf_1250"];
+                            $prevModel->delete();
+                        }
+                    }
+                    if ($leadid){
+                        $log->debug("SEM: removed Lead - " . $previd);
+                        self::deleteLeadById($leadid);
+                    }
+                }
+            }
+
     }
 }
 ?>

@@ -29,6 +29,7 @@ var Vtiger_PBXManager_Js = {
 	 * Function registers PBX for Outbound Call
 	 */
 	registerPBXOutboundCall : function(number,record) {
+		return true;
 		Vtiger_PBXManager_Js.makeOutboundCall(number,record);
 	},
 	/**
@@ -66,7 +67,7 @@ var Vtiger_PBXManager_Js = {
 	 * Function display the PBX popup
 	 */
 	showPBXIncomingCallPopup : function(record) {
-		return false;
+		// return false;
             // Salesplatform.ru begin PBXManager porting
             var contactFieldStyle = ((record.customer != null && record.customer != '') ? 'hide' : '');
             //SalesPlatform.ru end PBXManager porting
@@ -254,6 +255,7 @@ var Vtiger_PBXManager_Js = {
 	 * Function to forward call to number
 	 */
 	makeOutboundCall : function(number, record){
+		return true;
 		var params = {
                     // Salesplatform.ru begin PBXManager porting
                     data: {

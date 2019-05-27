@@ -65,6 +65,8 @@
                           'currencyGroupingPattern' : "{$CURRENT_USER_MODEL->get('currency_grouping_pattern')}", 'truncateTrailingZeros' : "{$CURRENT_USER_MODEL->get('truncate_trailing_zeros')}"};
             {/if}
 		</script>
+		<script src="{vresource_url('layouts/v7/lib/push/serviceWorker.min.js')}"></script>
+		<script src="{vresource_url('layouts/v7/lib/push/push.min.js')}"></script>
 	</head>
 	 {assign var=CURRENT_USER_MODEL value=Users_Record_Model::getCurrentUserModel()}
 	<body data-skinpath="{Vtiger_Theme::getBaseThemePath()}" data-language="{$LANGUAGE}" data-user-decimalseparator="{$CURRENT_USER_MODEL->get('currency_decimal_separator')}" data-user-dateformat="{$CURRENT_USER_MODEL->get('date_format')}"

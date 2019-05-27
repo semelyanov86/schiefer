@@ -92,14 +92,18 @@ class Zertifikat extends Vtiger_CRMEntity {
 			// TODO Handle actions after this module is installed.
 			$this->init($moduleName);
 			$this->createHandle($moduleName);
+			$this->registerWorkflow($moduleName);
 		} else if($eventType == 'module.disabled') {
 			$this->removeHandle($moduleName);
+			$this->unregisterWorkflow($moduleName);
 			// TODO Handle actions before this module is being uninstalled.
 		} else if($eventType == 'module.enabled') {
 			$this->createHandle($moduleName);
+            $this->registerWorkflow($moduleName);
 			// TODO Handle actions before this module is being uninstalled.
 		} else if($eventType == 'module.preuninstall') {
 			$this->removeHandle($moduleName);
+            $this->unregisterWorkflow($moduleName);
 			// TODO Handle actions when this module is about to be deleted.
 		} else if($eventType == 'module.preupdate') {
 			$this->createHandle($moduleName);
@@ -220,6 +224,22 @@ class Zertifikat extends Vtiger_CRMEntity {
 		$em = new VTEventsManager($adb);
 		$em->unregisterHandler("{$moduleName}Handler");
 	}
+
+	private function registerWorkflow($moduleName)
+    {
+        require 'modules/com_vtiger_workflow/VTEntityMethodManager.inc';
+        global $adb;
+        $emm = new VTEntityMethodManager($adb);
+        $emm->addEntityMethod($moduleName, "Update zertificat number","modules/Zertifikat/workflow/updateNummer.php", "UpdateNummer");
+    }
+
+    private function unregisterWorkflow($moduleName)
+    {
+        require 'modules/com_vtiger_workflow/VTEntityMethodManager.inc';
+        global $adb;
+        $emm = new VTEntityMethodManager($adb);
+        $emm->removeEntityMethod($moduleName, "Update zertificat number");
+    }
 
     /**
      * Save the related module record information. Triggered from CRMEntity->saveentity method or updateRelations.php
