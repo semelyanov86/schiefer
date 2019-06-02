@@ -35,9 +35,13 @@
         {assign var=CURRENCY_SYMBOL value=$CURRENCY_INFO['symbol']}
     {/if}
     {if $SYMBOL_PLACEMENT eq '$1.0'}
-        {$CURRENCY_SYMBOL}&nbsp;<span class="currencyValue">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}</span>
+        <div style="border: 1px solid #cccccc; width: 200px; height: 30px; padding-top: 5px; padding-left:5px;">
+            {$CURRENCY_SYMBOL}&nbsp;<span class="currencyValue">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}</span>
+        </div>
     {else}
-        <span class="currencyValue">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}</span>&nbsp;{$CURRENCY_SYMBOL}
+        <div style="border: 1px solid #cccccc; width: 200px; height: 30px; padding-top: 5px; padding-left:5px;">
+            <span class="currencyValue">{$FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'))}</span>&nbsp;{$CURRENCY_SYMBOL}
+        </div>
     {/if}
 {else if  $FIELD_MODEL->get('name') eq 'signature'}
 	{decode_html($FIELD_MODEL->getDisplayValue($FIELD_MODEL->get('fieldvalue'), $RECORD->getId(), $RECORD))}
