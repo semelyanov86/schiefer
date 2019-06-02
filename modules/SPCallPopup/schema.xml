@@ -1,0 +1,62 @@
+<?xml version='1.0'?>
+<schema>
+	<tables>
+		<table>
+			<name>vtiger_sp_callpopup</name>
+			<sql><![CDATA[CREATE TABLE IF NOT EXISTS vtiger_sp_callpopup (
+          popupid int(19) NOT NULL,
+          callid int(19),
+          call_no varchar(255) NOT NULL,
+          status tinyint DEFAULT 0, 
+          firstname VARCHAR(255),
+          lastname VARCHAR(255),
+          client_type VARCHAR(255),
+          comment text,
+          PRIMARY KEY (popupid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_sp_callpopupcf</name>
+			<sql><![CDATA[CREATE TABLE vtiger_sp_callpopupcf (
+          popupid int(19) NOT NULL,
+          PRIMARY KEY (popupid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_sp_callpopup_last_call</name>
+			<sql><![CDATA[CREATE TABLE IF NOT EXISTS vtiger_sp_callpopup_last_call (
+          last_call_id int(19) DEFAULT 0,
+          PRIMARY KEY (last_call_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_sp_convert_popup_mapping</name>
+			<sql><![CDATA[CREATE TABLE IF NOT EXISTS vtiger_sp_convert_popup_mapping (
+            id int(19) NOT NULL AUTO_INCREMENT,
+            popupfid int(19) NOT NULL,
+            leadfid int(19) DEFAULT NULL,
+            contactfid int(19) DEFAULT NULL,
+            accountfid int(19) DEFAULT NULL,
+            editable int(19) DEFAULT 1,
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          ]]></sql>
+		</table>
+		<table>
+			<name>vtiger_sp_mapping_default</name>
+			<sql><![CDATA[CREATE TABLE IF NOT EXISTS vtiger_sp_mapping_default (
+            modulename varchar(127) NOT NULL,
+            PRIMARY KEY (modulename)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          ]]></sql>
+		</table>
+		<table>
+			<name>vtiger_spcallpopup_user_field</name>
+			<sql><![CDATA[CREATE TABLE IF NOT EXISTS vtiger_spcallpopup_user_field (
+            recordid INT(25) NOT NULL,
+            userid INT(25) NOT NULL
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          ]]></sql>
+		</table>
+	</tables>
+</schema>

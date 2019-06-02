@@ -547,5 +547,16 @@ jQuery(function () {
 });
 
 function askForNotify() {
-	Push.create('Grant privileges accepted');
+	// Push.create('Grant privileges accepted');
+	Push.create('Incoming call', {
+		body: "Alex Metzler",
+		icon: '/icon.png',
+		link: 'https://scrm.schiefer.co/index.php?module=Contacts&view=Detail&record=48110&app=MARKETING',
+		requireInteraction: true,
+		onClick: function () {
+			var win = window.open('https://scrm.schiefer.co/index.php?module=Contacts&view=Detail&record=48110&app=MARKETING', '_blank');
+			win.focus();
+			this.close();
+		}
+	});
 }
