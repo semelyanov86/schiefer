@@ -48,9 +48,7 @@ class PBXManager extends CRMEntity {
         'User'     => 'user',
         'Recording' => 'recordingurl',
         'Start Time' => 'starttime',
-		//SalesPlatform.ru begin
         'Incoming Line Name' => 'incominglinename',
-		//SalesPlatform.ru end
     );
     // Make the field link to detail view
     var $list_link_field = 'customernumber';
@@ -81,19 +79,6 @@ class PBXManager extends CRMEntity {
         $this->db = PearDatabase::getInstance();
         $this->column_fields = getColumnFields('PBXManager');
     }
-    
-    //SalesPlatform.ru begin
-    function getListQuery($module, $where='') {
-        global $current_user;
-        $query = "SELECT vtiger_crmentity.*, vtiger_pbxmanager.*, vtiger_pbxmanagercf.* FROM vtiger_pbxmanager "
-                . "INNER JOIN vtiger_crmentity ON vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid "
-                . "INNER JOIN vtiger_pbxmanagercf ON vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid ";
-            $query .= getNonAdminAccessControlQuery($module, $current_user);
-            $query .= "WHERE vtiger_crmentity.deleted = 0 ". $where;
-            
-        return $query;
-    }
-    //SalesPlatform.ru end
     
      /**
      * Invoked when special actions are performed on the module.
@@ -129,7 +114,6 @@ class PBXManager extends CRMEntity {
         } else if ($event_type == 'module.preupdate') {
             // TODO Handle actions before this module is updated.
         } else if ($event_type == 'module.postupdate') {
-			$this->registerLookupEvents();
             // TODO Handle actions before this module is updated.
         }
     }
@@ -147,6 +131,7 @@ class PBXManager extends CRMEntity {
         global $log;
         $module = Vtiger_Module::getInstance('Users');
         if ($module) {
+            $module->initTables();
             $blockInstance = Vtiger_Block::getInstance('LBL_MORE_INFORMATION', $module);
             if ($blockInstance) {
                 $fieldInstance = new Vtiger_Field();
@@ -156,8 +141,8 @@ class PBXManager extends CRMEntity {
                 $fieldInstance->typeofdata = 'V~O';
                 $blockInstance->addField($fieldInstance);
             }
-        	$log->info('User Extension Field added');
         }
+        $log->fatal('User Extension Field added');
     }
     
     /**
@@ -172,7 +157,6 @@ class PBXManager extends CRMEntity {
         $restoreEvent = 'vtiger.entity.afterrestore';
         $batchSaveEvent = 'vtiger.batchevent.save';
         $batchDeleteEvent = 'vtiger.batchevent.delete';
-		$convertLeadEvent = 'vtiger.lead.convertlead';
         $handler_path = 'modules/PBXManager/PBXManagerHandler.php';
         $className = 'PBXManagerHandler';
         $batchEventClassName = 'PBXManagerBatchHandler';
@@ -181,7 +165,6 @@ class PBXManager extends CRMEntity {
         $EventManager->registerHandler($restoreEvent, $handler_path, $className);
         $EventManager->registerHandler($batchSaveEvent, $handler_path, $batchEventClassName);
         $EventManager->registerHandler($batchDeleteEvent, $handler_path, $batchEventClassName);
-		$EventManager->registerHandler($convertLeadEvent, $handler_path, $className);
         $log->fatal('Lookup Events Registered');
     }
     
@@ -337,7 +320,7 @@ class PBXManager extends CRMEntity {
         $log->fatal('MakeOutgoingCalls ActionName Removed');
     }
     
-    static function checkLinkPermission($linkData){
+    function checkLinkPermission($linkData){
         $module = new Vtiger_Module();
         $moduleInstance = $module->getInstance('PBXManager');
         
@@ -347,4 +330,5 @@ class PBXManager extends CRMEntity {
             return false;
         }
     }
+
 }

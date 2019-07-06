@@ -11,28 +11,43 @@ chdir(dirname(__FILE__) . '/../../../');
 include_once 'include/Webservices/Relation.php';
 include_once 'vtlib/Vtiger/Module.php';
 include_once 'includes/main/WebUI.php';
+require_once 'includes/SalesPlatform/ShutdownHandler.php';
 vimport('includes.http.Request');
 
-class PBXManager_PBXManager_Callbacks {
-    
-    function validateRequest($vtigersecretkey,$request) {
-        if($vtigersecretkey == $request->get('vtigersignature')){
-            return true;
-        }
-        return false;
+class PBXManager_PBXManager_Callbacks
+{
+    function validateRequest($vtigersecretkey, $requestkey)
+    {
+        return $vtigersecretkey == $requestkey;
     }
 
-    function process($request){
-	$pbxmanagerController = new PBXManager_PBXManager_Controller();
+    function process($request)
+    {
+        $pbxmanagerController = new PBXManager_PBXManager_Controller();
         $connector = $pbxmanagerController->getConnector();
-        if($this->validateRequest($connector->getVtigerSecretKey(),$request)) {
-            $pbxmanagerController->process($request);
-        }else {
-            $response = $connector->getXmlResponse();
-            echo $response;
+
+        $connector->logRequest($_REQUEST);
+
+        $valid = $this->validateRequest(
+            $connector->getVtigerSecretKey(),
+            $request->get('vtigersignature')
+        );
+
+        if (!$valid) {
+            echo 'Fail';
+            return;
         }
+
+        $id = $pbxmanagerController->process($request);
+        echo 'Done';
     }
 }
+
+if (empty($current_user)) {
+    $current_user = Users::getActiveAdminUser();
+}
+
+(new ShutdownHandler())->registerSystemEventsLog();
+
 $pbxmanager = new PBXManager_PBXManager_Callbacks();
 $pbxmanager->process(new Vtiger_Request($_REQUEST));
-?>

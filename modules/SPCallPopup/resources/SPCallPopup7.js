@@ -277,7 +277,7 @@ var Vtiger_SPCallPopup_JS = {
                 if (!contactName) {
                     contactName = document.getElementById('phone').innerText;
                 }
-                Push.create('Incoming call', {
+/*                Push.create('Incoming call', {
                     body: contactName,
                     icon: '/icon.png',
                     link: link,
@@ -287,7 +287,7 @@ var Vtiger_SPCallPopup_JS = {
                         win.focus();
                         this.close();
                     }
-                });
+                });*/
                 this.processingPopupsCount++;
             } else {
                 Vtiger_SPCallPopup_JS.updatePopupCallStatus(currentCall.popupId, currentCall.callStatus);

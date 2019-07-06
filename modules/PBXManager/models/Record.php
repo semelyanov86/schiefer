@@ -8,67 +8,330 @@
  * All Rights Reserved.
  *************************************************************************************/
 
-class PBXManager_Record_Model extends Vtiger_Record_Model{
-    
+class PBXManager_Record_Model extends Vtiger_Record_Model
+{
+
     const moduletableName = 'vtiger_pbxmanager';
     const lookuptableName = 'vtiger_pbxmanager_phonelookup';
     const entitytableName = 'vtiger_crmentity';
-    
-    static function getCleanInstance(){
+
+    /**
+     * Function to save/update contact/account/lead record in Phonelookup table on every save
+     * TODO move to phonelookup methods
+     *
+     * @param str $fieldName field containing phone number
+     * @param arr $details   crm data crmid setype
+     * @param mix $new       unknown param
+     *
+     * @return bool always true?
+     */
+    public function receivePhoneLookUpRecord($fieldName, $details, $new)
+    {
+        $recordid = $details['crmid'];
+        $fnumber = preg_replace('/[-()\s+]/', '', $details[$fieldName]);
+        $rnumber = strrev($fnumber);
+        $db = PearDatabase::getInstance();
+
+        if ($fnumber == '') {
+            $db->pquery(
+                'DELETE FROM ' . self::lookuptableName . ' where crmid=? AND fieldname=? AND setype=?',
+                [$recordid, $fieldName, $details['setype']]
+            );
+            return true;
+        }
+
+        $params = [$recordid, $details['setype'], $fnumber, $rnumber, $fieldName];
+        $db->pquery('INSERT INTO '.self::lookuptableName.
+            '(crmid, setype, fnumber, rnumber, fieldname)
+            VALUES(?,?,?,?,?)
+            ON DUPLICATE KEY
+            UPDATE fnumber=VALUES(fnumber), rnumber=VALUES(rnumber)',
+            $params
+        );
+
+        self::setCustomerFuzz($fnumber, $details);
+
+        return true;
+    }
+
+    /**
+     * Function to delete contact/account/lead record in Phonelookup table on every delete
+     * TODO move to phonelookup methods
+     *
+     * @param str $recordid crmid
+     *
+     * @return int affected
+     */
+    public function deletePhoneLookUpRecord($recordid)
+    {
+        $db = PearDatabase::getInstance();
+        $result = $db->pquery(
+            'DELETE FROM '.self::lookuptableName.' where crmid=?',
+            [$recordid]
+        );
+        return $db->getAffectedRowCount($result);
+    }
+
+    /**
+     * Function to check the customer with number in phonelookup table
+     * 3 steps:
+     *   phonelookup
+     *   updatecustomer
+     *   fuzzySearch
+     *
+     * @param str $from       raw phone number
+     * @param int $asgnUserId call assigned user id
+     *
+     * @return void
+     */
+    public static function lookUpRelatedWithNumber($from, $asgnUserId = null)
+    {
+        if (empty($from)) {
+            return false;
+        }
+
+        //skip numbers length under this
+        $lowerLimit = 7;
+
+        //prefix numbers length above this
+        $upperLimit = 10;
+
+        $db = PearDatabase::getInstance();
+
+        $origFrom = $from;
+
+        //$from = preg_replace('/^\+?7/', '8', $from);
+
+        $fnumber = preg_replace('/[-()\s+]/', '', $from);
+
+        // exclude internals processing
+        if (strlen($fnumber) < $lowerLimit) return false;
+
+        // Exact match
+        $query = "SELECT setype, crmid FROM vtiger_pbxmanager_phonelookup
+            WHERE fnumber = ? LIMIT 1";
+        $exact = $db->pquery($query, [$fnumber]);
+
+        // Bind every past call to a newly found id
+        if ($db->num_rows($exact) == 1) {
+            $entityData = $db->fetchByAssoc($exact);
+            // TODO if ($cfg->updateOnLookup)
+            self::setCustomer($origFrom, $entityData);
+        }
+
+        // Search first entity data with match to assigned user if need
+        $callerEntityData = self::fuzzySearch($fnumber);
+
+        return $callerEntityData;
+
+        $condition = ($asgnUserId != null) &&
+            ($callerEntityData['smownerid'] != $asgnUserId);
+        if (!$condition) {
+            return $callerEntityData;
+        }
+
+        while ($row = $db->fetchByAssoc($result)) {
+            if ($row['smownerid'] != $asgnUserId) {
+                continue;
+            }
+            return $row;
+        }
+    }
+
+    /**
+     * Silent sql customer update
+     * by exact phone number
+     *
+     * @param str $phone customer phonenumber
+     * @param arr $data  entity info crmid setype
+     *
+     * @return int affected
+     */
+    public static function setCustomer($phone, $data)
+    {
+        $db = PearDatabase::getInstance();
+        $query = "UPDATE vtiger_pbxmanager SET
+            customer = ?,
+            customertype = ?
+            WHERE customer IN ('', NULL, 0)
+                AND customernumber = ?";
+
+        $res = $db->pquery($query, [$data['crmid'], $data['setype'], $phone]);
+
+        return $db->getAffectedRowCount($res);
+    }
+
+    /**
+     * Silent sql customer update
+     * by phone number last 10
+     *
+     * @param str $phone customer phonenumber
+     * @param arr $data  entity info crmid setype
+     *
+     * @return int affected
+     */
+    public static function setCustomerFuzz($phone, $data)
+    {
+        $last10 = substr($phone, -10, 10);
+
+        return self::setCustomer($last10, $data);
+    }
+
+    /**
+     * Last 10 digits lookup
+     *
+     * @param str $phone      raw phonenumber
+     * @param int $upperLimit upper limit to cut
+     *
+     * @return bool | arr
+     */
+    public static function fuzzySearch($phone, $upperLimit = 10)
+    {
+        $args = [$phone];
+        if (strlen($phone) >= $upperLimit) {
+            $args = ['%' . substr($phone, -10, 10)];
+        }
+
+        $db = PearDatabase::getInstance();
+        $result = $db->pquery(
+            'SELECT
+                crmid AS id,
+                label AS name,
+                vtiger_crmentity.setype,
+                smownerid,
+                fieldname
+            FROM ' . self::lookuptableName . '
+            INNER JOIN vtiger_crmentity USING (crmid)
+            WHERE fnumber LIKE ? AND deleted=0',
+            $args
+        );
+        if ($db->num_rows($result) == 0) {
+            return false;
+        }
+
+        return $db->fetchByAssoc($result);
+    }
+
+    /**
+     * To update Assigned / smownerid as it is a system field
+     * SQL update
+     *
+     * @param int $userid crm user id
+     *
+     * @return int affected
+     */
+    public function updateAssignedUser($userid)
+    {
+        $callid = $this->get('pbxmanagerid');
+        $db = PearDatabase::getInstance();
+        $res = $db->pquery(
+            'UPDATE ' . self::entitytableName . ' SET smownerid=? WHERE crmid=?',
+            [$userid, $callid]
+        );
+
+        return $db->getAffectedRowCount($res);
+    }
+
+    /**
+     * Find User by extension. sql lookup
+     *
+     * @param <string> $number phone_crm_extension
+     *
+     * @return mixed bool|null|array
+     */
+    public static function getUserInfoWithNumber($number)
+    {
+        $db = PearDatabase::getInstance();
+        if (empty($number)) {
+            return false;
+        }
+        $query = PBXManager_Record_Model::buildSearchQueryWithUIType(11, $number, 'Users');
+        $result = $db->pquery($query, array());
+        if ($db->num_rows($result) > 0 ) {
+            $user['id'] = $db->query_result($result, 0, 'id');
+            $user['name'] = $db->query_result($result, 0, 'name');
+            $user['setype'] = 'Users';
+            return $user;
+        }
+        return;
+    }
+
+    /**
+     * Overriden? always new instance?
+     */
+    static function getCleanInstance()
+    {
         return new self;
     }
-    
+
     /**
      * Function to get call details(polling)
-     * return <array> calls
+     *
+     * @deprecated
+     * @return <array> calls
      */
-    public function searchIncomingCall(){
+    public function searchIncomingCall()
+    {
         $db = PearDatabase::getInstance();
-        $query = 'SELECT * FROM '.self::moduletableName.' AS module_table INNER JOIN '.self::entitytableName.' AS entity_table  WHERE module_table.callstatus IN(?,?) AND module_table.direction=? AND module_table.pbxmanagerid=entity_table.crmid AND entity_table.deleted=0';
-        $result = $db->pquery($query,array('ringing','in-progress','inbound'));
+        $db->database->SetFetchMode(2);
+        $query = 'SELECT * FROM '.self::moduletableName.' AS module_table INNER JOIN '
+            . self::entitytableName.' AS entity_table'
+            . ' WHERE module_table.callstatus IN(?,?)'
+            . ' AND module_table.direction=?'
+            . ' AND module_table.pbxmanagerid=entity_table.crmid'
+            . ' AND entity_table.deleted=0';
+        $result = $db->pquery($query, array('ringing','in-progress','inbound'));
         $recordModels = array();
         $rowCount =  $db->num_rows($result);
-        for($i=0; $i<$rowCount; $i++) {
+        for ($i=0; $i<$rowCount; $i++) {
             $rowData = $db->query_result_rowdata($result, $i);
-            
+
             $record = new self();
             $record->setData($rowData);
             $recordModels[] = $record;
-            
+
             //To check if the call status is 'ringing' for >5min
-            $starttime = strtotime($rowData['starttime']);
+            $starttime   = strtotime($rowData['starttime']);
             $currenttime = strtotime(Date('y-m-d H:i:s'));
-            $timeDiff = $currenttime - $starttime;
+            $timeDiff    = $currenttime - $starttime;
             if($timeDiff > 300 && $rowData['callstatus'] == 'ringing') {
                 $recordIds[] = $rowData['crmid'];
             }
-            //END
-        }    
-        
-        if(count($recordIds)) $this->updateCallStatus($recordIds);
-        
+        }
+
+        if (count($recordIds)) $this->updateCallStatus($recordIds);
+
         return $recordModels;
     }
-    
+
     /**
-     * To update call status from 'ringing' to 'no-response', if status not updated 
+     * To update call status from 'ringing' to 'no-response', if status not updated
      * for more than 5 minutes
-     * @param type $recordIds
+     *
+     * @param arr $recordIds list
+     *
+     * @deprecated
+     * @return void
      */
-    public function updateCallStatus($recordIds) {
+    public function updateCallStatus($recordIds)
+    {
         $db = PearDatabase::getInstance();
-        $query = "UPDATE ".self::moduletableName." SET callstatus='no-response' 
-                  WHERE pbxmanagerid IN (".generateQuestionMarks($recordIds).") 
-                  AND callstatus='ringing'";
+        $query = "UPDATE ".self::moduletableName." SET callstatus='no-response'
+            WHERE pbxmanagerid IN (".generateQuestionMarks($recordIds).")
+            AND callstatus='ringing'";
         $db->pquery($query, $recordIds);
     }
 
-        /**
+    /**
      * Function to save PBXManager record with array of params
-     * @param <array> $values
-     * return <string> $recordid
+     *
+     * @param <array> $params values
+     *
+     * @deprected
+     * @return <string> $recordid
      */
-    public function saveRecordWithArrray($params){
+    public function saveRecordWithArrray($params)
+    {
         $moduleModel = Vtiger_Module_Model::getInstance('PBXManager');
         $recordModel = Vtiger_Record_Model::getCleanInstance('PBXManager');
         $recordModel->set('mode', '');
@@ -78,21 +341,20 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
                 $fieldValue = $details[$fieldName];
                 $recordModel->set($fieldName, $fieldValue);
         }
-        $model = $moduleModel->saveRecord($recordModel);
-//        self::checkDublicates($model->getId());
-        return $model;
+        return $moduleModel->saveRecord($recordModel);
     }
-    
+
     /**
      * Function to update call details
+     *
      * @param <array> $details
-     * $param <string> $callid
-     * return true
+     * @param <string> $user
+     *
+     * @deprecated
+     * @return true
      */
-    // SalesPlatform.ru begin
-    public function updateCallDetails($details, $user = null){
-    //public function updateCallDetails($details){
-    // SalesPlatform.ru end
+    public function updateCallDetails($details, $user)
+    {
         $db = PearDatabase::getInstance();
         $sourceuuid = $this->get('sourceuuid');
         $query = 'UPDATE '.self::moduletableName.' SET ';
@@ -101,35 +363,42 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
             $params[] = $value;
         }
         $query = substr_replace($query ,"",-1);
-        // SalesPlatform.ru begin
-        $query .= ' WHERE sourceuuid = ?'; 
- 	$params[] = $sourceuuid; 
-       // SalesPlatform.ru end
 
         // SalesPlatform.ru begin
-        if($user) { 
-            $query .= ' AND user = ?'; 
-            $params[] = $user['id']; 
-        } 
+        //$query .= ' WHERE sourceuuid = ?';
         // SalesPlatform.ru end
-        
+
+        $params[] = $sourceuuid;
+
+        // SalesPlatform.ru begin
+        $query .= ' WHERE sourceuuid = ?'; // PINstudio @binizik
+        // $params[] = $user['id']; // PINstudio @binizik
+        // SalesPlatform.ru end
+
         $db->pquery($query, $params);
-//        self::checkDublicatesByUUID($sourceuuid);
         return true;
     }
-    
-    /**
-     * To update Assigned to with user who answered the call 
-     */
-    public function updateAssignedUser($userid){
-        $callid = $this->get('pbxmanagerid');
+
+    public function updateCallDetailsWithoutUser($details){
         $db = PearDatabase::getInstance();
-        $query = 'UPDATE '.self::entitytableName.' SET smownerid=? WHERE crmid=?';
-        $params = array($userid, $callid);
+        $sourceuuid = $this->get('sourceuuid');
+
+        $query = 'UPDATE '.self::moduletableName.' SET ';
+
+        foreach($details as $key => $value){
+            $query .= $key . '=?,';
+            $params[] = $value;
+        }
+
+        $query = substr_replace($query ,'', -1);
+        $params[] = $sourceuuid;
+        $query .= ' WHERE sourceuuid = ?';
+
         $db->pquery($query, $params);
+
         return true;
     }
-    
+
     public static function getInstanceById($phonecallsid){
         $db = PearDatabase::getInstance();
         $record = new self();
@@ -144,86 +413,50 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         return $record;
     }
 
-    // SalesPlatform.ru begin
-    public static function getInstanceBySourceUUID($sourceuuid, $user  = null){
-    //public static function getInstanceBySourceUUID($sourceuuid){
-    // SalesPlatform.ru end
+    public static function getInstanceBySourceUUID($sourceuuid, $user)
+    {
         $db = PearDatabase::getInstance();
         $record = new self();
-        
-        // SalesPlatform.ru begin
-        $query = 'SELECT * FROM ' . self::moduletableName . ' WHERE sourceuuid=?'; 
-                $params = array($sourceuuid); 
-                if($user) { 
-                    $query .= ' AND user=?'; 
-                    $params[] = $user['id']; 
-                } 
-        // SalesPlatform.ru end
-        
+
+        $query = 'SELECT * FROM ' . self::moduletableName . ' WHERE sourceuuid=?';
+        $params = array($sourceuuid);
+
         $result = $db->pquery($query, $params);
-        $rowCount =  $db->num_rows($result);
-        if($rowCount){
+        $rowCount = $db->num_rows($result);
+        if ($rowCount){
             $rowData = $db->query_result_rowdata($result, 0);
             $record->setData($rowData);
         }
         return $record;
     }
-    
-    //SalesPlatform.ru begin
+
+    public static function getInstanceBySourceUUIDWithoutUser($sourceuuid){
+        $db = PearDatabase::getInstance();
+        $record = new self();
+
+        $query = 'SELECT * FROM ' . self::moduletableName . ' WHERE sourceuuid=?';
+        $params = array($sourceuuid);
+
+        $result = $db->pquery($query, $params);
+        $rowCount =  $db->num_rows($result);
+
+        if($rowCount){
+            $rowData = $db->query_result_rowdata($result, 0);
+            $record->setData($rowData);
+        }
+
+        return $record;
+    }
+
     public static function updateCallRecordBySourceUUID($sourceuuid, $recordingUrl) {
         $db = PearDatabase::getInstance();
         $query = 'UPDATE '.self::moduletableName.' SET recordingurl=? WHERE sourceuuid=?';
         $db->pquery($query, array($recordingUrl, $sourceuuid));
-//        self::checkDublicatesByUUID($sourceuuid);
     }
-    
-    /**
-     * Returns pbx manager record model which matches for received end call details
-     * @param string $sourceuuid
-     * @return PBXManager_Record_Model
-     */
-    public static function getModelForEndCallDetails($sourceuuid) {
-        $db = PearDatabase::getInstance();
-        $query = "SELECT * FROM " . self::moduletableName . " WHERE sourceuuid=? AND callstatus IN('in-progress','completed')"; 
-        
-        $params = array($sourceuuid);
-        $result = $db->pquery($query, $params);
-        $rowCount =  $db->num_rows($result);
-//        self::checkDublicatesByUUID($sourceuuid);
-        if($rowCount){
-            $rowData = $db->query_result_rowdata($result, 0);
-            $record = new self();
-            $record->setData($rowData);
-            
-            return $record;
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Updates call details of pbx manager record model by it's id
-     * @param int $recordId
-     * @param array $details
-     */
-    public static function updateCallDetailsByRecordId($recordId, $details) {
-        $db = PearDatabase::getInstance();
-        $query = 'UPDATE '.self::moduletableName.' SET ';
-        $params = array();
-        foreach($details as $key => $value){
-            $query .= $key . '=?,';
-            $params[] = $value;
-        }
-        $query = substr_replace($query ,"",-1);
-        $query .= ' WHERE pbxmanagerid=?';
-        $params[] = $recordId;
-        
-        $db->pquery($query, $params);
-//        self::checkDublicates($recordId);
-    }
-    
+
     public static function updateCallDetailsBySourceUUID($sourceuuid, $details) {
         $db = PearDatabase::getInstance();
+        //file_put_contents('vt.log', var_export($details,1)."\n", FILE_APPEND);
         $query = 'UPDATE '.self::moduletableName.' SET ';
         $params = array();
         foreach($details as $key => $value){
@@ -233,141 +466,29 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $query = substr_replace($query ,"",-1);
         $query .= ' WHERE sourceuuid = ?';
         $params[] = $sourceuuid;
-        
+
         $db->pquery($query, $params);
-//        self::checkDublicatesByUUID($sourceuuid);
-    }
-    //SalesPlatform.ru end
-    
-    /**
-     * Function to save/update contact/account/lead record in Phonelookup table on every save
-     * @param <array> $details
-     */
-    public function receivePhoneLookUpRecord($fieldName, $details, $new){
-        $recordid = $details['crmid'];
-        $fnumber = preg_replace('/[-()\s+]/', '',$details[$fieldName]);
-        $rnumber = strrev($fnumber);
-        $db = PearDatabase::getInstance();
-        
-        //SalesPlatform.ru begin 
-        /* Delete record if it null after filtering number */
-        if($fnumber == '') {
-            $db->pquery('DELETE FROM ' . self::lookuptableName . ' where crmid=? AND fieldname=? AND setype=?',
-                    array($recordid, $fieldName, $details['setype']));
-            return true;
+        /*
+        //PINstudio @DK #red-612
+        $pbxRecord = self::getInstanceBySourceUUIDWithoutUser($sourceuuid);
+        //w(var_export($details, 1));
+        $pbxRecord->set('mode', 'edit');
+        foreach($details as $key => $value){
+            $pbxRecord->set($key, $value);
         }
-        //SalesPLatform.ru end
-        
-        $params = array($recordid, $details['setype'],$fnumber,$rnumber, $fieldName);
-        $db->pquery('INSERT INTO '.self::lookuptableName.
-                    '(crmid, setype, fnumber, rnumber, fieldname) 
-                    VALUES(?,?,?,?,?) 
-                    ON DUPLICATE KEY 
-                    UPDATE fnumber=VALUES(fnumber), rnumber=VALUES(rnumber)', 
-                    $params);
-        return true;
-    }
-    
-     /**
-      * Function to delete contact/account/lead record in Phonelookup table on every delete
-      * @param <string> $recordid
-      */
-    public function deletePhoneLookUpRecord($recordid){
-        $db = PearDatabase::getInstance();
-        $db->pquery('DELETE FROM '.self::lookuptableName.' where crmid=?', array($recordid));
+        $pbxRecord->save();
+
+        return 1;
+        */
     }
 
-     /**
-      * * Function to check the customer with number in phonelookup table
-      * @param <string> $from
-      */
-    //SalesPlatform.ru begin
-    public static function lookUpRelatedWithNumber($from, $callAssignedIserId = null){
-    //public static function lookUpRelatedWithNumber($from){
-    //SalesPlatform.ru end
-        $db = PearDatabase::getInstance();
-        $fnumber = preg_replace('/[-()\s+]/', '',$from);
-        
-        //SalesPlatform.ru begin fix search entity by number
-        if($from == NULL) {
-            return;
-        }
-        
-        /* Prepare entity search params and conditions */
-        $numberSql = "?";
-        $numberSqlArg = $fnumber;
-        if(strlen($fnumber) >= 10) {
-            $numberSql = '"%"?';
-            $numberSqlArg = array(substr($fnumber, -10, 10));
-        }
-        
-        $result = $db->pquery(
-            'SELECT vtiger_crmentity.crmid AS id,vtiger_crmentity.label AS name,vtiger_crmentity.setype,vtiger_crmentity.smownerid, ' . 
-            self::lookuptableName . '.fieldname FROM ' . self::lookuptableName . ' ' .
-            'INNER JOIN vtiger_crmentity ON vtiger_crmentity.crmid=' . self::lookuptableName . '.crmid ' .
-            'WHERE ' . self::lookuptableName . '.fnumber LIKE ' . $numberSql . ' AND vtiger_crmentity.deleted=0', 
-            array($numberSqlArg)
-        );
-        
-        /* Search first entity data with match to assigned user if need */
-        $callerEntityData = $db->fetchByAssoc($result);
-        if($callAssignedIserId != null && $callerEntityData['smownerid'] != $callAssignedIserId) {
-            while($row = $db->fetchByAssoc($result)) {
-                if($row['smownerid'] == $callAssignedIserId) {
-                    $callerEntityData = $row;
-                    break;
-                }
-            }
-        } 
-
-        return $callerEntityData;
-        
-        //$rnumber = strrev($fnumber);
-        //$result = $db->pquery('SELECT crmid, fieldname FROM '.self::lookuptableName.' WHERE fnumber LIKE "'. $fnumber . '%" OR rnumber LIKE "'. $rnumber . '%" ', array());
-        //if($db->num_rows($result)){
-        //    $crmid = $db->query_result($result, 0, 'crmid');
-        //    $fieldname = $db->query_result($result, 0, 'fieldname');
-        //    $contact = $db->pquery('SELECT label,setype FROM '.self::entitytableName.' WHERE crmid=? AND deleted=0', array($crmid));
-        //    if($db->num_rows($result)){
-        //        $data['id'] = $crmid;
-        //        $data['name'] = $db->query_result($contact, 0, 'label');
-        //        $data['setype'] = $db->query_result($contact, 0, 'setype');
-        //        $data['fieldname'] = $fieldname;
-        //        return $data;
-        //    }
-        //    else
-        //        return;
-        //}
-        //return;
-        //SalesPlatform.ru end
-    }
-    
-     /**
-      * Function to user details with number
-      * @param <string> $number
-      */
-    public static function getUserInfoWithNumber($number){
-        $db = PearDatabase::getInstance();
-        if(empty($number)){
-            return false;
-        }
-        $query = PBXManager_Record_Model::buildSearchQueryWithUIType(11, $number, 'Users');
-        $result = $db->pquery($query, array());
-        if($db->num_rows($result) > 0 ){
-            $user['id'] = $db->query_result($result, 0, 'id');
-            $user['name'] = $db->query_result($result, 0, 'name');
-            $user['setype'] = 'Users';
-            return $user;
-        }
-        return;
-    }    
-    
-    // Because, User is not related to crmentity 
-    public function buildSearchQueryWithUIType($uitype, $value, $module){
+    // Because, User is not related to crmentity
+    public function buildSearchQueryWithUIType($uitype, $value, $module)
+    {
         if (empty($value)) {
             return false;
         }
-        
+
         $cachedModuleFields = VTCacheUtils::lookupFieldInfo_Module($module);
         if ($cachedModuleFields === false) {
             getColumnFields($module); // This API will initialize the cache as well
@@ -414,7 +535,7 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
         $query = 'SELECT id, phone_crm_extension FROM vtiger_users';
         $result = $db->pquery($query, array());
         $count = $db->num_rows($result);
-        for($i=0; $i<$count; $i++){
+        for ($i=0; $i<$count; $i++){
             $number = $db->query_result($result, $i, 'phone_crm_extension');
             $userId = $db->query_result($result, $i, 'id');
             if($number)
@@ -424,160 +545,174 @@ class PBXManager_Record_Model extends Vtiger_Record_Model{
     }
 
     /**
-     * Function to save the current Record Model. Function rewrote by Sergey Emelyanov. It deletes previous PBXRecord to prevent dublicates
+     * Function to retrieve display value for a field
+     * separate process for url, callstatus
+     *
+     * @param str  $fieldName vtiger field name
+     * @param bool $recordId  crm id
+     *
+     * @return bool|string <String>
+     * @internal param $ <String> $fieldName - field name for which values need to get
      */
-/*    public function save() {
-        self::checkDublicates();
-        $this->getModule()->saveRecord($this);
-    }*/
-
-    /*
-     * Function created Lead Record if current call status is 'No Answer.
-     * return Lead model
-     */
-    public static function createLeadRecord($pbxInstance)
+    public function getDisplayValue($fieldName, $recordId = false)
     {
-        $number = $pbxInstance->get('customernumber');
-        $curCustomer = $pbxInstance->get('customer');
-        if ($curCustomer) {
-            $customerModel = Vtiger_Record_Model::getInstanceById($curCustomer);
-            $customerName = $customerModel->getName();
-        } else {
-            $customerName = "Missed Call";
+        if (empty($recordId)) {
+            $recordId = $this->getId();
         }
-        $leadModel = Vtiger_Record_Model::getCleanInstance('Leads');
-        $leadModel->set('mode', 'create');
-        $leadModel->set('lastname', $customerName);
-        $leadModel->set('assigned_user_id', '1');
-        $leadModel->set('phone', $number);
-        $leadModel->set('description', $pbxInstance->get('sourceuuid'));
-        $leadModel->save();
-        $pbxInstance->set('cf_1250', $leadModel->getId());
-        $pbxInstance->set('mode', 'edit');
-        if (!$curCustomer) {
-            $pbxInstance->set('customer', $leadModel->getId());
-        }
-        $pbxInstance->save();
-        return $leadModel;
 
-    }
-
-    public static function checkDublicatesByUUID($uuid)
-    {
-        global $log;
-        $db = PearDatabase::getInstance();
-        $pbxId = false;
-        $query="select vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanagercf.cf_1250 from vtiger_pbxmanager inner join vtiger_crmentity on vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid inner join vtiger_pbxmanagercf on vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid where vtiger_crmentity.deleted=0 and  vtiger_pbxmanager.sourceuuid = ?  and vtiger_pbxmanager.callstatus IN (?,?,?)";
-        if ($uuid) {
-            $log->debug("SEM: Runned query - " . $query);
-            $result = $db->pquery($query, array($uuid, 'Answered elsewhere', 'no-answer', 'in-progress'));
-            $log->debug('SEM: params for query - ' . $uuid . ' Answered elsewhere ' . ' no-answer ' . ' in-progress');
-            $count = $db->num_rows($result);
-            for($i=0; $i<$count; $i++){
-                $pbxId = $db->query_result($result, $i, 'pbxmanagerid');
-
-            }
-            if ($pbxId) {
-                self::checkDublicates($pbxId);
-            }
-        }
-    }
-
-    /*
-     * Function deletes Lead Record by id
-     * @param int Lead id
-     * return boolean depend on successful implementation.
-     */
-    public static function deleteLeadById($leadid)
-    {
-        if (!$leadid) {
+        $fieldModel = $this->getModule()->getField($fieldName);
+        if (!$fieldModel) {
             return false;
         }
-        $leadModel = Vtiger_Record_Model::getInstanceById($leadid, 'Leads');
-        if ($leadModel) {
-            $leadModel->delete();
-            return true;
-        } else {
-            return false;
+
+        // TODO replace with ui type?
+        if ($fieldName == 'recordingurl') {
+            return $this->isCompleted()
+                ? $this->getAudiorecordTpl()
+                : '';
         }
+
+        // Display custom call status
+        if ($fieldName == 'callstatus') {
+            $value = $fieldModel->getDisplayValue(
+                $this->get($fieldName),
+                $recordId,
+                $this
+            );
+
+            return $this->getStatusHtml($recordId, $value);
+        }
+
+        return $fieldModel->getDisplayValue($this->get($fieldName), $recordId, $this);
     }
 
-    public static function checkDublicates($id = false)
+
+    public function getStatusHtml($id, $value)
     {
-        global $adb;
-        global $log;
-        if ($id) {
-            $pbxInstance = Vtiger_Record_Model::getInstanceById($id);
-        } else {
-//            $pbxInstance = $this;
-            return false;
+        $record = PBXManager_Record_Model::getInstanceById($id);
+
+        $labelType = $this->getLabelClass($value);
+        $icon = $this->getIconClass($record->get('direction'));
+
+        return sprintf(
+            '<span class="label label-%s"><i class="%s icon-white"></i>&nbsp;%s</span>',
+            $labelType,
+            $icon,
+            vtranslate($value, $this->getModuleName())
+        );
+    }
+
+    public function isCompleted($status = false)
+    {
+        if (empty($status)) {
+            $status = $this->get('callstatus');
         }
-        $status = $pbxInstance->get('callstatus');
-        $sourceid = $pbxInstance->get('sourceuuid');
-        $number = $pbxInstance->get('customernumber');
-        if ($status === 'no-answer') {
-            $noAnswerLead = self::createLeadRecord($pbxInstance);
-        }
-        if ($sourceid) {
-            $query="select vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanagercf.cf_1250 from vtiger_pbxmanager inner join vtiger_crmentity on vtiger_crmentity.crmid=vtiger_pbxmanager.pbxmanagerid inner join vtiger_pbxmanagercf on vtiger_pbxmanagercf.pbxmanagerid=vtiger_pbxmanager.pbxmanagerid where vtiger_crmentity.deleted=0 and  vtiger_pbxmanager.sourceuuid = ?";
-            $log->debug("SEM: Runned query - " . $query);
-            $result = $adb->pquery($query, array($sourceid));
-            $log->debug('SEM: params for query - ' . $sourceid);
-            if($adb->num_rows($result) > 1){
-                while($result_set = $adb->fetch_array($result))
-                {
-                    $previd = $result_set["pbxmanagerid"];
-                    $log->debug("SEM: working with id - " . $previd . " And curid - " . $id);
-                    $leadid = false;
-                    if ($previd != $id) {
-                        $prevModel = Vtiger_Record_Model::getInstanceById($previd);
-                        if ($prevModel->get('callstatus') && $prevModel->get('callstatus') === 'completed') {
-                            continue;
-                        } else {
-                            $leadid = $result_set["cf_1250"];
-                            $log->debug("SEM: removed PBX Entity by UUID - " . $previd . ' with callstatus ' . $prevModel->get('callstatus'));
-                            $prevModel->delete();
-                        }
-                    }
-                    if ($leadid){
-                        $log->debug("SEM: removed Lead by UUID - " . $previd);
-                        self::deleteLeadById($leadid);
-                    }
-                }
-            }
+        return in_array(
+            $status,
+            [
+                /*
+                vtranslate('completed', 'PBXManager'),
+                vtranslate('ANSWER', 'PBXManager'),
+                */
+                'ANSWER',
+                'completed'
+            ]
+        );
+    }
+
+    /**
+     * TODO Move to views
+     *
+     * @param str $direction call direction
+     *
+     * @return str one of fontawesome css class names
+     */
+    public function getIconClass($direction)
+    {
+        $map = [
+            'outbound' => 'icon-arrow-up',
+            'inbound'  => 'icon-arrow-down',
+            'internal' => 'icon-retweet',
+        ];
+        return array_key_exists($direction, $map)
+            ? $map[$direction]
+            : 'icon-question-sign';
+    }
+
+    /**
+     * TODO Move to views
+     *
+     * @param str $status call status
+     *
+     * @return str one of PNotify css class names
+     */
+    public function getLabelClass($status)
+    {
+        $map = [
+            'ringing' => 'info',
+            'В прогрессе' => 'info',
+            'in-progress' => 'info',
+            'completed' => 'success',
+            'Завершен' => 'success',
+            'Отвечен' => 'success',
+            'no-answer' => 'important',
+            'ANSWER' => 'success',
+            'CANCEL' => 'important',
+        ];
+
+        return array_key_exists($status, $map)
+            ? $map[$status]
+            : 'warning';
+    }
+
+    /**
+     * get key using server model
+     * get hash using module model
+     * compile url from recordingurl field value
+     *
+     * @return string
+     */
+    public function getAudiorecordTpl()
+    {
+        $url = $this->get('recordingurl');
+        if (empty($url)) return 'No record';
+
+        $settings = PBXManager_Server_Model::getInstance();
+        $secretKey = $settings->get('vtigersecretkey');
+
+        $audioFilename = array_pop(explode('/', $url));
+        $callCID = array_shift(explode('.', $audioFilename));
+
+        $audioUrl = implode('/', [
+            rtrim($settings->get('webappurl'), '/'),
+            'getRecord',
+            $this->getHash([$callCID], $secretKey),
+            $audioFilename
+        ]);
+
+        $cfg = new PBXManager_Config_Model;
+        $options = $cfg->getModDefaults();
+        $preload = $options['audioPreload'];
+        return '<audio src="'. $audioUrl .'" preload="' . $preload . '" onclick="event.stopPropagation()" controls>'
+            . '<a href="'. $audioUrl .'" ><i class="icon-volume-up"></i></a>'
+            . '</audio>';
+    }
+
+    /**
+     * Calculate md5 hash
+     *
+     * @param arr $params    data
+     * @param str $secretKey salt
+     *
+     * @return str
+     */
+    public function getHash($params, $secretKey)
+    {
+        $hash = '';
+        foreach ($params as $key => $value) {
+            $hash = md5($hash . $value);
         }
 
-            $query = "SELECT vtiger_pbxmanager.pbxmanagerid, vtiger_pbxmanager.customernumber, vtiger_pbxmanagercf.cf_1250, vtiger_pbxmanager.callstatus FROM vtiger_pbxmanager INNER JOIN vtiger_crmentity on vtiger_pbxmanager.pbxmanagerid=vtiger_crmentity.crmid INNER JOIN vtiger_pbxmanagercf ON vtiger_pbxmanagercf.pbxmanagerid = vtiger_pbxmanager.pbxmanagerid ORDER BY vtiger_pbxmanager.pbxmanagerid DESC LIMIT 30";
-        $log->debug("SEM: Runned query - " . $query);
-            $result = $adb->pquery($query, array());
-            if($adb->num_rows($result) > 1){
-                while($result_set = $adb->fetch_array($result))
-                {
-                    $previd = $result_set["pbxmanagerid"];
-                    $prevNumber = $result_set['customernumber'];
-                    $status = $result_set['callstatus'];
-                    $log->debug("SEM: working with id - " . $previd . " And curid - " . $id);
-                    $leadid = false;
-                    if ($previd == $id) {
-                        continue;
-                    }
-                    if ($prevNumber == $number) {
-                        if ($status === 'completed') {
-                            continue;
-                        } else {
-                            $log->debug("SEM: removed PBX Entity - " . $previd . ' with callstatus ' . $prevModel->get('callstatus'));
-                            $prevModel = Vtiger_Record_Model::getInstanceById($previd);
-                            $leadid = $result_set["cf_1250"];
-                            $prevModel->delete();
-                        }
-                    }
-                    if ($leadid){
-                        $log->debug("SEM: removed Lead - " . $previd);
-                        self::deleteLeadById($leadid);
-                    }
-                }
-            }
-
+        return md5($hash . $secretKey);
     }
 }
-?>

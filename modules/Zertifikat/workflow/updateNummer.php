@@ -31,7 +31,7 @@ function UpdateNummer($ws_entity){
         $zertificatInstance->set('mode', 'edit');
 
         //запись Даты в поле “Срок оплаты”
-        $zertificatInstance->set('cf_1366', 'ZE/' . $date . '/' . $zeNo);
+        $zertificatInstance->set('cf_1366', $date . '/' . $zeNo);
 
         //сохранение
         $zertificatInstance->save();

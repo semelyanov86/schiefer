@@ -8,60 +8,42 @@
  * All Rights Reserved.
  * *********************************************************************************** */
 
-class PBXManager_Detail_View extends Vtiger_Detail_View{
-    
+class PBXManager_Detail_View extends Vtiger_Detail_View
+{
+
     /**
      * Overrided to disable Ajax Edit option in Detail View of
      * PBXManager Record
+     *
+     * @param Vtiger_Record_Model $record view data
      */
-    function isAjaxEnabled($recordModel) {
-		return false;
-	} 
-    
-    //SalesPlatform.ru begin
-    function process(\Vtiger_Request $request) {
+    function isAjaxEnabled($record)
+    {
+        return false;
+    }
+
+    /**
+     * Overided to convert totalduration to minutes
+     */
+    function preProcess(Vtiger_Request $request, $display=true)
+    {
         $recordId = $request->get('record');
         $moduleName = $request->getModule();
+
         if (!$this->record) {
             $this->record = Vtiger_DetailView_Model::getInstance($moduleName, $recordId);
         }
-        $recordModel = $this->record->getRecord();
 
-        // To show recording link only if callstatus is 'completed' 
-        if ($recordModel->get('callstatus') != 'completed') {
-            $recordModel->set('recordingurl', '');
+        $record = $this->record->getRecord();
+
+        $value = 'No record';
+        if ($record->isCompleted($record->get('callstatus'))) {
+            $module = Vtiger_Module_Model::getInstance($moduleName);
+            $value = $module->getAudiorecordTpl($recordId);
         }
-        if ($recordModel->get('callstatus') == 'completed') {
-            $recordModel->set('recordingurl', '<audio src="index.php?module=PBXManager&action=ListenRecord&record=' . $recordId . '" controls>
-                    <a href="index.php?module=PBXManager&action=ListenRecord&record=' . $recordId . '" ><i class="icon-volume-up"></i></a>
-                </audio>');
-        }
-        parent::process($request);
+
+        $record->set('recordingurl', $value);
+
+        return parent::preProcess($request, true);
     }
-    /*
-     * Overided to convert totalduration to minutes
-     */
-//    function preProcess(Vtiger_Request $request, $display=true) {
-//        $recordId = $request->get('record');
-//        $moduleName = $request->getModule();
-//		if(!$this->record){
-//            $this->record = Vtiger_DetailView_Model::getInstance($moduleName, $recordId);
-//        }
-//        $recordModel = $this->record->getRecord();
-//
-//        // To show recording link only if callstatus is 'completed' 
-//        if($recordModel->get('callstatus') != 'completed') { 
-//            $recordModel->set('recordingurl', '');
-//        }
-//        // SalesPlatform.ru begin
-//        if($recordModel->get('callstatus') == 'completed') {
-//            $recordModel->set('recordingurl', '<audio src="index.php?module=PBXManager&action=ListenRecord&record='.$recordId.'" controls>
-//                    <a href="index.php?module=PBXManager&action=ListenRecord&record='.$recordId.'" ><i class="icon-volume-up"></i></a>
-//                </audio>');
-//        }
-//        // SalesPlatform.ru end
-//
-//        return parent::preProcess($request, true);
-//    }                    
-    //SalesPaltform.ru end
 }
