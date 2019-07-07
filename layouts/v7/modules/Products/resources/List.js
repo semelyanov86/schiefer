@@ -53,7 +53,6 @@ Vtiger_List_Js("Products_List_Js", {
                                             if (!err) {
                                                 app.helper.showSuccessNotification({'message': data.state});
                                                 form.find("input[type=text], textarea").val("");
-                                                console.log(data);
                                                 $('*[data-id="' + data.recordId + '"]').find('[data-name="qtyinstock"]').find('.value').html(data.qtyinstock);
                                                 $('*[data-id="' + data.recordId + '"]').find('[data-name="cf_1501"]').find('.value').html(data.cf_1501);
                                                 $('*[data-id="' + data.recordId + '"]').find('[data-name="cf_1503"]').find('.value').html(data.cf_1503);

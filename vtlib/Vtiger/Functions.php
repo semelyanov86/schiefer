@@ -483,7 +483,8 @@ class Vtiger_Functions {
 			$fld_value = rtrim($value, '0');
 		}
 		$value = rtrim($fld_value, '.');
-		return $value;
+//		return $value;
+		return str_replace('.', ',', $value);
 	}
 
 	static function fromHTML($string, $encode=true) {
