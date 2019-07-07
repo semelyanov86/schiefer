@@ -76,6 +76,8 @@ $languageStrings = array(
 	'LBL_SHOW_BUNDLE_IN_INVENTORY' => 'Bündel Artikel in Rechnung/Quotes/Sales Order/Bestellung anzeigen',
 	'LBL_BUNDLE_TOTAL_COST' => 'Gesamtkosten des Bundle',
 	'LBL_UPDATE_BUNDLE_PRICE' => 'Update-Bundle Preis',
+  'Auftrags Nr. SAMS' => 'Auftrags Nr. SAMS',
+  'Gramm' => 'Gramm',
 
   'LBL_PRODUCT_NAME' => 'Produkt-Name',
   'LBL_PRICE_QUANTITY' => 'Preis x Menge',

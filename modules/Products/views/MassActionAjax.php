@@ -124,9 +124,13 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
                 } elseif (!is_object($orderModel)) {
                     $response->setError('404', $orderModel);
                 } else {
+                    $finalModel = Vtiger_Record_Model::getInstanceById($productModel->getId());
                     $result = array();
-                    $result["_recordLabel"] = $orderModel->getName();
-                    $result["_recordId"] = $orderModel->getId();
+                    $result["_recordLabel"] = $finalModel->getName();
+                    $result["recordId"] = $finalModel->getId();
+                    $result["qtyinstock"] = $finalModel->get('qtyinstock');
+                    $result["cf_1501"] = $finalModel->get('cf_1501');
+                    $result["cf_1503"] = $finalModel->get('cf_1503');
                     $result["_recordModule"] = $request->get("module");
                     $result['state'] = vtranslate('RECORD_CREATED_SUCCESSFULLY', $request->getModule());
 

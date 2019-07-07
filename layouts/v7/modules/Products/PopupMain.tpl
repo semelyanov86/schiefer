@@ -44,7 +44,7 @@
                                 {else}
                                 {assign var=COUNTER value=$COUNTER+1}
                                 {/if}
-                                <td class="fieldLabel alignMiddle">
+                                <td class="fieldLabel alignMiddle" {if $COUNTER eq 2} style="padding-left: 50px;" {/if}>
                                     {if $isReferenceField eq "reference"}
                                         {if $refrenceListCount > 1}
                                             {assign var="DISPLAYID" value=$FIELD_MODEL->get('fieldvalue')}
@@ -86,7 +86,9 @@
                                             {/if}
                                         {else}
                                             {if $FIELD_MODEL->getName() eq 'qtyinstock'}
-                                                Gramm
+                                                {vtranslate('Gramm', 'Products')}
+                                                {elseif $FIELD_MODEL->getName() eq 'customerno'}
+                                                {vtranslate('Auftrags Nr. SAMS', 'Products')}
                                             {else}
                                             {vtranslate($FIELD_MODEL->get('label'), $MODULE)}
                                             {/if}
@@ -95,7 +97,7 @@
                                     &nbsp;{if $FIELD_MODEL->isMandatory() eq true} <span class="redColor">*</span> {/if}
                                 </td>
                                 {if $FIELD_MODEL->get('uitype') neq '83'}
-                                    <td class="fieldValue" {if $FIELD_MODEL->getFieldDataType() eq 'boolean'} style="width:25%" {/if} {if $FIELD_MODEL->get('uitype') eq '19'} colspan="3" {assign var=COUNTER value=$COUNTER+1} {/if}>
+                                    <td class="fieldValue" {if $FIELD_MODEL->getFieldDataType() eq 'boolean'} style="width:25%" {/if} {if $FIELD_MODEL->get('uitype') eq '19'} colspan="3" {assign var=COUNTER value=$COUNTER+1} {/if} {if $COUNTER eq 1} style="padding-right: 30px;" {/if}>
                                         {include file=vtemplate_path($FIELD_MODEL->getUITypeModel()->getTemplateName(),$MODULE)}
                                     </td>
                                 {/if}

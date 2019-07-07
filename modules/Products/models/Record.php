@@ -633,9 +633,9 @@ class Products_Record_Model extends Vtiger_Record_Model {
             global $adb;
             $sql= $adb->pquery("INSERT INTO vtiger_inventoryproductrel SET id=?,productid=?,sequence_no=?,quantity=?,listprice=?,incrementondel=?",array($soid,$productid,1,$qtyinstock,$this->get('unit_price'),1));
             if ($recordModel->getModuleName() == 'SalesOrder') {
-                $sql= $adb->pquery("UPDATE vtiger_salesorder SET total=?,subtotal=?,currency_id=? WHERE salesorderid=?",array($this->get('unit_price'),$subtotal,1,$soid));
+                $sql= $adb->pquery("UPDATE vtiger_salesorder SET total=?,subtotal=?,currency_id=?,subject=?,exciseduty=? WHERE salesorderid=?",array($this->get('unit_price'),$subtotal,1,$this->get('productname'),$qtyinstock,$soid));
             } elseif ($recordModel->getModuleName() == 'PurchaseOrder') {
-                $sql= $adb->pquery("UPDATE vtiger_purchaseorder SET total=?,subtotal=?,currency_id=? WHERE purchaseorderid=?",array($this->get('unit_price'),$subtotal,0,$soid));
+                $sql= $adb->pquery("UPDATE vtiger_purchaseorder SET total=?,subtotal=?,currency_id=?,subject=?,exciseduty=? WHERE purchaseorderid=?",array($this->get('unit_price'),$subtotal,0,$this->get('productname'),$qtyinstock,$soid));
             }
 
         }
