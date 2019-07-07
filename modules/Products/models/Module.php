@@ -275,4 +275,29 @@ class Products_Module_Model extends Vtiger_Module_Model {
 		return $summaryFieldsList;
 	}
 
+    public function getModuleBasicLinks(){
+        $basicLinks = parent::getModuleBasicLinks();
+        if ($_REQUEST['view'] == 'List') {
+            $basicLinks[] = array(
+                'linktype' => 'BASIC',
+                'linklabel' => 'Entnahme',
+                'linkurl' => 'javascript:Products_List_Js.addOrder()',
+                'linkicon' => 'fa-minus'
+            );
+            $basicLinks[] = array(
+                'linktype' => 'BASIC',
+                'linklabel' => 'Einlage',
+                'linkurl' => 'javascript:Products_List_Js.addPurchase()',
+                'linkicon' => 'fa-plus'
+            );
+            $basicLinks[] = array(
+                'linktype' => 'BASIC',
+                'linklabel' => 'Inventur',
+                'linkurl' => 'javascript:Products_List_Js.addInventur()',
+                'linkicon' => 'fa-hand-paper-o'
+            );
+        }
+        return $basicLinks;
+    }
+
 }

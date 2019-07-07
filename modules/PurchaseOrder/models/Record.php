@@ -46,4 +46,29 @@ class PurchaseOrder_Record_Model extends Inventory_Record_Model {
 			$purchaseOrderStatus = $db->query_result($result,0,"postatus");
 			return $purchaseOrderStatus;
 	}
+
+    public function saveFromProductRequest(Vtiger_Request $request) {
+        $module = $request->getModule();
+        $parent = $request->get('source');
+        $userId = Users_Record_Model::getCurrentUserModel()->getId();
+        $this->set('subject', 'Einlage');
+        $this->set('vendor_id', '105555');
+        $this->set('postatus', 'Received Shipment');
+        $this->set('assigned_user_id', $userId);
+        $contactModel = Vtiger_Record_Model::getInstanceById('105555', 'Vendors');
+        if ($contactModel) {
+            $this->set('bill_street', $contactModel->street);
+            $this->set('bill_city', $contactModel->city);
+            $this->set('bill_code', $contactModel->postalcode);
+            $this->set('bill_country', $contactModel->country);
+            $this->set('ship_street', $contactModel->street);
+            $this->set('ship_city', $contactModel->city);
+            $this->set('ship_code', $contactModel->postalcode);
+            $this->set('ship_country', $contactModel->country);
+
+        }
+        $this->save();
+        return $this;
+
+    }
 }

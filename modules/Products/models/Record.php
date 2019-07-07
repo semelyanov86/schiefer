@@ -610,4 +610,50 @@ class Products_Record_Model extends Vtiger_Record_Model {
 		return array('subProductsTotalCost' => CurrencyField::convertToUserFormat((float)$subProductsTotalCost, '', true, true),
 					 'subProductsCosts'		=> $subProductsCostInfo);
 	}
+
+    public static function getProductModelByCode($code) {
+        global $adb;
+        $query = 'SELECT productid FROM vtiger_productcf INNER JOIN vtiger_crmentity ON vtiger_productcf.productid = vtiger_crmentity.crmid WHERE vtiger_productcf.cf_1487 = ? AND vtiger_crmentity.deleted = 0 LIMIT 1';
+        $rs = $adb->pquery($query, array($code));
+        if ($adb->num_rows($rs) > 0) {
+            $productid = $adb->query_result($rs, 0, 'productid');
+            return self::getInstanceById($productid, 'Products');
+        } else {
+            return false;
+        }
+    }
+
+    public function linkProductWithModel($recordModel, $qtyinstock)
+    {
+        $soid = $recordModel->getId();
+        $productid = $this->getId();
+        $qtyinstock = $this->tofloat($qtyinstock);
+        $subtotal = $qtyinstock * $this->get('unit_price');
+        if($soid>0){
+            global $adb;
+            $sql= $adb->pquery("INSERT INTO vtiger_inventoryproductrel SET id=?,productid=?,sequence_no=?,quantity=?,listprice=?,incrementondel=?",array($soid,$productid,1,$qtyinstock,$this->get('unit_price'),1));
+            if ($recordModel->getModuleName() == 'SalesOrder') {
+                $sql= $adb->pquery("UPDATE vtiger_salesorder SET total=?,subtotal=?,currency_id=? WHERE salesorderid=?",array($this->get('unit_price'),$subtotal,1,$soid));
+            } elseif ($recordModel->getModuleName() == 'PurchaseOrder') {
+                $sql= $adb->pquery("UPDATE vtiger_purchaseorder SET total=?,subtotal=?,currency_id=? WHERE purchaseorderid=?",array($this->get('unit_price'),$subtotal,0,$soid));
+            }
+
+        }
+        return $this;
+    }
+    public function tofloat($num) {
+        $dotPos = strrpos($num, '.');
+        $commaPos = strrpos($num, ',');
+        $sep = (($dotPos > $commaPos) && $dotPos) ? $dotPos :
+            ((($commaPos > $dotPos) && $commaPos) ? $commaPos : false);
+
+        if (!$sep) {
+            return floatval(preg_replace("/[^0-9]/", "", $num));
+        }
+
+        return floatval(
+            preg_replace("/[^0-9]/", "", substr($num, 0, $sep)) . '.' .
+            preg_replace("/[^0-9]/", "", substr($num, $sep+1, strlen($num)))
+        );
+    }
 }

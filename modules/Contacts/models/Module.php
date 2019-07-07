@@ -317,5 +317,18 @@ class Contacts_Module_Model extends Vtiger_Module_Model {
     public function getDefaultSearchField(){
         return "lastname";
     }
+
+    public static function getModelByKudden($kudden)
+    {
+        global $adb;
+        $query = 'SELECT contactid FROM vtiger_contactscf INNER JOIN vtiger_crmentity ON vtiger_contactscf.contactid = vtiger_crmentity.crmid WHERE vtiger_contactscf.cf_1137 = ? AND vtiger_crmentity.deleted = 0 LIMIT 1';
+        $rs = $adb->pquery($query, array($kudden));
+        if ($adb->num_rows($rs) > 0) {
+            $contactid = $adb->query_result($rs, 0, 'contactid');
+            return Vtiger_Record_Model::getInstanceById($contactid, 'Contacts');
+        } else {
+            return false;
+        }
+    }
     
 }

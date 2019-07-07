@@ -461,7 +461,10 @@ function updateInventoryProductRel($entity) {
 	if ($moduleName === 'Invoice') {
 		$statusFieldName = 'invoicestatus';
 		$statusFieldValue = 'Cancel';
-	}
+	} elseif ($moduleName === 'SalesOrder') {
+        $statusFieldName = 'sostatus';
+        $statusFieldValue = 'Cancelled';
+    }
 
 	$statusChanged = false;
 	$vtEntityDelta = new VTEntityDelta ();
@@ -479,7 +482,18 @@ function updateInventoryProductRel($entity) {
 			$updateInventoryProductRel_deduct_stock = false;
 			deductProductsFromStock($entity_id);
 		}
-	} elseif($recordDetails[$statusFieldName] == $statusFieldValue) {
+	} elseif($statusChanged && $moduleName === 'SalesOrder') {
+        if ($recordDetails[$statusFieldName] == $statusFieldValue) {
+            $adb->pquery("UPDATE vtiger_inventoryproductrel SET incrementondel=0 WHERE id=?", array($entity_id));
+            $updateInventoryProductRel_deduct_stock = false;
+//            if (empty($update_product_array)) {
+                addProductsToStock($entity_id);
+//            }
+        } elseif ($oldEntity == $statusFieldValue) {
+            $updateInventoryProductRel_deduct_stock = false;
+            deductProductsFromStock($entity_id);
+        }
+    } elseif($recordDetails[$statusFieldName] == $statusFieldValue) {
 		$updateInventoryProductRel_deduct_stock = false;
 	}
 
@@ -509,6 +523,33 @@ function updateInventoryProductRel($entity) {
 
 		$log->debug("Exit from function updateInventoryProductRel(".$entity_id.")");
 	}
+
+    if($moduleName === 'SalesOrder') {
+        $adb->pquery("UPDATE vtiger_inventoryproductrel SET incrementondel=1 WHERE id=?",array($entity_id));
+
+        $product_info = $adb->pquery("SELECT productid,sequence_no, quantity from vtiger_inventoryproductrel WHERE id=?",array($entity_id));
+        $numrows = $adb->num_rows($product_info);
+        for($index = 0;$index <$numrows;$index++) {
+            $productid = $adb->query_result($product_info,$index,'productid');
+            $qty = $adb->query_result($product_info,$index,'quantity');
+            $sequence_no = $adb->query_result($product_info,$index,'sequence_no');
+            $qtyinstk= getProductQtyInStock($productid);
+            $upd_qty = $qtyinstk-$qty;
+            updateProductQty($productid, $upd_qty);
+            $sub_prod_query = $adb->pquery("SELECT productid, quantity from vtiger_inventorysubproductrel WHERE id=? AND sequence_no=?",array($entity_id,$sequence_no));
+            if($adb->num_rows($sub_prod_query)>0) {
+                for($j=0;$j<$adb->num_rows($sub_prod_query);$j++) {
+                    $sub_prod_id = $adb->query_result($sub_prod_query,$j,"productid");
+                    $subProductQty = $adb->query_result($sub_prod_query, $j, 'quantity');
+                    $sqtyinstk= getProductQtyInStock($sub_prod_id);
+                    $supd_qty = $sqtyinstk-($qty * $subProductQty);
+                    updateProductQty($sub_prod_id, $supd_qty);
+                }
+            }
+        }
+
+        $log->debug("Exit from function updateInventoryProductRel(".$entity_id.")");
+    }
 
 	if ($moduleName === 'PurchaseOrder') {
 		$statusFieldName = 'postatus';
@@ -551,6 +592,9 @@ function updateInventoryProductRel($entity) {
 						break;
 					}
 				}
+				foreach ($itemQuantitiesList as $key=>$value) {
+//				    deductFromProductStock($key, $value);
+                }
 			}
 		} elseif ($statusFieldValue === 'Received Shipment') {
 			$db = PearDatabase::getInstance();
