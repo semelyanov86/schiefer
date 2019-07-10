@@ -60,9 +60,9 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
         if ($sourceModule == 'SalesOrder') {
             $fieldsArr['cf_1137'] = Vtiger_Field_Model::getInstance('cf_1137', $contactsModel);
             $fieldsArr['customerno'] = Vtiger_Field_Model::getInstance('customerno', $orderModel);
-            $fieldsArr['cf_1487'] = Vtiger_Field_Model::getInstance('cf_1487', $moduleModel);
 //        $fieldsArr['assigned_user_id'] = Vtiger_Field_Model::getInstance('assigned_user_id', $orderModel);
             $fieldsArr['qtyinstock'] = Vtiger_Field_Model::getInstance('qtyinstock', $moduleModel);
+            $fieldsArr['cf_1487'] = Vtiger_Field_Model::getInstance('cf_1487', $moduleModel);
         } elseif ($sourceModule == 'PurchaseOrder' || $sourceModule == 'Products') {
             $fieldsArr['cf_1487'] = Vtiger_Field_Model::getInstance('cf_1487', $moduleModel);
 //        $fieldsArr['assigned_user_id'] = Vtiger_Field_Model::getInstance('assigned_user_id', $orderModel);
@@ -148,7 +148,7 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
         if ($productModel) {
             $productModel->set('mode', 'edit');
             $productModel->set('cf_1501', $qty);
-            $diff = $productModel->get('qtyinstock') - $productModel->tofloat($qty);
+            $diff = $productModel->tofloat($qty) - $productModel->get('qtyinstock');
 //            var_dump($diff, $productModel->get('qtyinstock'), $qty, str_replace('.', ',', $diff));die;
             $productModel->set('cf_1503', str_replace('.', ',', $diff));
             $productModel->save();

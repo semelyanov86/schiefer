@@ -1,4 +1,3 @@
-
 Vtiger_List_Js("Products_List_Js", {
     addOrder: function() {
         var params =  {
@@ -53,9 +52,13 @@ Vtiger_List_Js("Products_List_Js", {
                                             if (!err) {
                                                 app.helper.showSuccessNotification({'message': data.state});
                                                 form.find("input[type=text], textarea").val("");
-                                                $('*[data-id="' + data.recordId + '"]').find('[data-name="qtyinstock"]').find('.value').html(data.qtyinstock);
-                                                $('*[data-id="' + data.recordId + '"]').find('[data-name="cf_1501"]').find('.value').html(data.cf_1501);
-                                                $('*[data-id="' + data.recordId + '"]').find('[data-name="cf_1503"]').find('.value').html(data.cf_1503);
+                                                var trobj = $('*[data-id="' + data.recordId + '"]');
+                                                if (trobj.length > 0) {
+                                                    trobj.find('[data-name="qtyinstock"]').find('.value').html(data.qtyinstock);
+                                                    trobj.find('[data-name="cf_1501"]').find('.value').html(data.cf_1501);
+                                                    trobj.find('[data-name="cf_1503"]').find('.value').html(data.cf_1503);
+                                                }
+
                                                 // app.helper.hideModal();
                                             } else {
                                                 app.helper.showSuccessNotification({'title': 'Error', 'message': err.message});

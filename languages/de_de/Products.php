@@ -78,6 +78,10 @@ $languageStrings = array(
 	'LBL_UPDATE_BUNDLE_PRICE' => 'Update-Bundle Preis',
   'Auftrags Nr. SAMS' => 'Auftrags Nr. SAMS',
   'Gramm' => 'Gramm',
+  'Product with this code not found' => 'Product with this code not found',
+  'Quantity and code fields are empty' => 'Quantity and code fields are empty',
+  'Error in creating entity' => 'Error in creating entity',
+  'RECORD_CREATED_SUCCESSFULLY' => 'Record created successfully',
 
   'LBL_PRODUCT_NAME' => 'Produkt-Name',
   'LBL_PRICE_QUANTITY' => 'Preis x Menge',
