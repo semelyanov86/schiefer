@@ -21,8 +21,8 @@
                     <input type="hidden" name="view" value="MassActionAjax" />
                     <input type="hidden" name="mode" value="saveAjax" />
 
+                    <h4><center>{$HEADMESSAGE}</center></h4>
                     <div class="modal-body tabbable">
-
                         <hr>
                         <table class="table table-borderless">
                             <tr>

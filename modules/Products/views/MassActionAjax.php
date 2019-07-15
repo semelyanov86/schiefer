@@ -56,6 +56,17 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
         $moduleModel = Vtiger_Module_Model::getInstance($moduleName);
         $orderModel = Vtiger_Module_Model::getInstance($sourceModule);
         $contactsModel = Vtiger_Module_Model::getInstance('Contacts');
+        switch ($sourceModule) {
+            case 'PurchaseOrder':
+                $message = 'Einlage';
+                break;
+            case 'SalesOrder':
+                $message = 'Entnahme';
+                break;
+            default:
+                $message = 'Inventur';
+                break;
+        }
         $fieldsArr = array();
         if ($sourceModule == 'SalesOrder') {
             $fieldsArr['cf_1137'] = Vtiger_Field_Model::getInstance('cf_1137', $contactsModel);
@@ -77,6 +88,7 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
         $viewer->assign('SITEURL', $site_URL);
         $viewer->assign('MODULE', $moduleName);
         $viewer->assign('USER_MODEL', $user);
+        $viewer->assign('HEADMESSAGE', $message);
         $viewer->assign('BLOCK_FIELDS', $fieldsArr);
         echo $viewer->view('PopupMain.tpl', $moduleName, true);
     }
@@ -91,6 +103,9 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
             $response->setError('408', vtranslate('Quantity and code fields are empty', 'Products'));
         } else {
             $productModel = Products_Record_Model::getProductModelByCode($code);
+            $tara = $productModel->get('cf_1517');
+            $qty = $qty - $tara;
+            $qty = str_replace('.', ',', $qty);
             if (!$productModel) {
                 $response->setError('404', vtranslate('Product with this code not found', 'Products'));
             } else {
