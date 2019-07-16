@@ -27,8 +27,73 @@ Vtiger_List_Js("Products_List_Js", {
         };
         this.makeRequest(params);
     },
+    registerSearchContact: function(){
+        if (!jQuery('#Products_editView_fieldName_cf_1137')) {
+            return false;
+        }
+        var modal = jQuery('#productModal');
+        modal.on('keyup', '#Products_editView_fieldName_cf_1137', function (e) {
+            var target = e.currentTarget;
+            var params = {};
+            params.data = {
+                module: 'Products',
+                view: 'MassActionAjax',
+                mode: 'quickSearch',
+                number: e.currentTarget.value,
+            };
+            app.request.post(params).then(
+                function (err,data) {
+/*                    var newdata = $.map(data, function(dataItem) {
+                        return { value: dataItem.value, data: dataItem.label };
+                    });*/
+                    console.log(data);
+                    if(!err) {
+                        jQuery('#Products_editView_fieldName_cf_1137').autocomplete({
+                            source: data,
+                            minLength: 2,
+                            select: function(event, ui) {
+                                var curdata = ui.item.data;
+                                document.getElementById('kuddenresult').innerText = 'Kundenname: ' + curdata;
+                            }
+                        });
+                    }
+                },
+                function (data, err) {
+                }
+            );
+        });
+    },
+    registerSelectNummer: function(){
+        if (!jQuery('#Products_editView_fieldName_cf_1137')) {
+            return false;
+        }
+        var modal = jQuery('#productModal');
+        modal.on('change', '#Products_editView_fieldName_cf_1137', function (e) {
+            var target = e.currentTarget;
+            var params = {};
+            params.data = {
+                module: 'Products',
+                view: 'MassActionAjax',
+                mode: 'quickSearchCurrent',
+                number: e.currentTarget.value,
+            };
+            app.request.post(params).then(
+                function (err,data) {
+                    console.log(data, err);
+                    if(!err) {
+                        document.getElementById('kuddenresult').innerText = 'Kundenname: ' + data;
+                    } else {
+                        document.getElementById('kuddenresult').innerText = 'Error: ' + err.message;
+                    }
+                },
+                function (data, err) {
+                }
+            );
+        });
+    },
     makeRequest: function (params) {
         app.helper.showProgress();
+        var self = this;
         app.request.post({data: params}).then(
             function (err, data) {
                 if (err === null) {
@@ -41,7 +106,8 @@ Vtiger_List_Js("Products_List_Js", {
                             'cb': function (wizardContainer) {
                                 app.helper.hideProgress();
                                 var form = jQuery('form', wizardContainer);
-
+                                self.registerSearchContact();
+                                self.registerSelectNummer();
                                 form.submit(function (e) {
                                     var date = new Date;
                                     e.preventDefault();

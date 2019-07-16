@@ -10,7 +10,7 @@
 -->*}
 {strip}
     <div id="sendMessageContainer" class='modal-dialog modal-lg'>
-        <div class="modal-content">
+        <div id="productModal" class="modal-content">
             <form class="form-horizontal" id="massSave" method="post" action="index.php">
                 {assign var=HEADER_TITLE value={vtranslate('Quick Create', $MODULE)}|cat:" "|cat:{vtranslate($SINGLE_MODULE, $MODULE)}}
                 {include file="ModalHeader.tpl"|vtemplate_path:$MODULE TITLE=$HEADER_TITLE}
@@ -110,6 +110,7 @@
                                 {/if}
                             </tr>
                         </table>
+                        <div id="kuddenresult"></div>
                     </div>
                 </div>
                 <div class="modal-footer">

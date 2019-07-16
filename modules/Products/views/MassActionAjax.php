@@ -15,6 +15,8 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
         $this->exposeMethod('showSendOrder');
         $this->exposeMethod('showSendPurchase');
         $this->exposeMethod('saveAjax');
+        $this->exposeMethod('quickSearch');
+        $this->exposeMethod('quickSearchCurrent');
 
     }
 
@@ -103,9 +105,12 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
             $response->setError('408', vtranslate('Quantity and code fields are empty', 'Products'));
         } else {
             $productModel = Products_Record_Model::getProductModelByCode($code);
-            $tara = $productModel->get('cf_1517');
-            $qty = $qty - $tara;
-            $qty = str_replace('.', ',', $qty);
+            if ($parent == 'Products') {
+                $tara = $productModel->get('cf_1517');
+                $qty = str_replace(',', '.', $qty);
+                $qty = $qty - $tara;
+                $qty = str_replace('.', ',', $qty);
+            }
             if (!$productModel) {
                 $response->setError('404', vtranslate('Product with this code not found', 'Products'));
             } else {
@@ -169,5 +174,47 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
             $productModel->save();
         }
         return $productModel;
+    }
+
+    public function quickSearch(Vtiger_Request $request)
+    {
+        global $adb;
+        $result = array();
+        $query = 'SELECT contactid FROM vtiger_contactscf INNER JOIN vtiger_crmentity ON vtiger_contactscf.contactid = vtiger_crmentity.crmid WHERE vtiger_contactscf.cf_1137 LIKE ? AND vtiger_crmentity.deleted = 0 LIMIT 10';
+        $rs = $adb->pquery($query, array('%' . $request->get('number') . '%'));
+        $noOfUsers = $adb->num_rows($rs);
+        for($i=0; $i<$noOfUsers; ++$i) {
+            $row = $adb->query_result_rowdata($rs, $i);
+            $userId = $row['contactid'];
+            $model = Vtiger_Record_Model::getInstanceById($userId, 'Contacts');
+            $result[] = array(
+                'data' => $model->getName(),
+                'value' => $model->get('cf_1137'),
+            );
+        }
+        $response = new Vtiger_Response();
+        $response->setEmitType(Vtiger_Response::$EMIT_JSON);
+        $response->setResult($result);
+        $response->emit();
+    }
+    public function quickSearchCurrent(Vtiger_Request $request)
+    {
+        global $adb;
+        $query = 'SELECT contactid FROM vtiger_contactscf INNER JOIN vtiger_crmentity ON vtiger_contactscf.contactid = vtiger_crmentity.crmid WHERE vtiger_contactscf.cf_1137 = ? AND vtiger_crmentity.deleted = 0 LIMIT 1';
+        $rs = $adb->pquery($query, array($request->get('number')));
+        if ($adb->num_rows($rs) > 0) {
+            $contactid = $adb->query_result($rs, 0, 'contactid');
+            $model = Vtiger_Record_Model::getInstanceById($contactid, 'Contacts');
+        } else {
+            $model = false;
+        }
+        $response = new Vtiger_Response();
+        $response->setEmitType(Vtiger_Response::$EMIT_JSON);
+        if ($model) {
+            $response->setResult($model->getName());
+        } else {
+            $response->setError(404, 'Contact with this number not found!!');
+        }
+        $response->emit();
     }
 }
