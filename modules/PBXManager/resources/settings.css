@@ -1,0 +1,9 @@
+.controls {display: flex; justify-content: space-between}
+.filterBlock input {margin: 0;}
+.filterBlock * {display: inline-block; margin-left: 5px !important;}
+#filterResults {min-width: 100px}
+#logsContainer td:nth-child(even) { word-break: break-all; cursor: pointer; }
+.logInfo td:nth-child(odd) { color: #777; font-weight: bold; text-align:right; }
+.logInfo td:nth-child(even) { word-break: break-all;}
+.wrap {max-height: 70vh;overflow: auto;}
+

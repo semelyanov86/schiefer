@@ -1,0 +1,173 @@
+/*
+.pbxcall {color:black}
+*/
+.bb1 {border:1px solid #abd8e1;border-width:1px 0 0;}
+.m-0 {margin: .2em}
+.m-1 {margin: .5em}
+.m-2 {margin: 1em}
+.mb-1 {margin-bottom:.5em}
+.mb-2 {margin-bottom:1em}
+.pb-1 {padding-bottom:.5em}
+.pb-2 {padding-bottom:1em}
+.pl-1 {padding-left:.5em}
+.pv-1 {padding: 0.5em 0}
+.pv-2 {padding: 1em 0}
+
+.folded {
+  max-height: 15px !important;
+  overflow: hidden !important;
+}
+.vtCall .ui-pnotify-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  transition: all .2s ease;
+}
+.vtCall .icon-remove:before {
+  content: "\f00d";
+  display: inline-block;
+  font: normal normal normal 14px/1 FontAwesome;
+  font-size: inherit;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  counter-reset: section;
+}
+
+h41.ui-pnotify-title::before {
+  counter-increment: section;
+  content: counter(section);
+  font-size: xx-small;
+  padding-right: .3em;
+}
+
+.crmdata_tmp {
+  font-size: .7rem;
+  line-height: .8rem;
+}
+
+.crmdata {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crmdata * {
+  text-shadow: none !important;
+}
+
+.crmdata a {
+  white-space: nowrap;
+}
+
+.inverted {
+  padding: .5rem .8rem;
+  background: #3a87ad;
+  display: block;
+  color: white !important;
+  box-sizing: border-box;
+}
+
+.inverted a,
+.inverted a:visited
+{
+  color: white
+}
+
+.linked {
+  padding-left: .9rem;
+}
+.newentity h5 {text-align:center}
+.create {display:flex; flex-wrap:wrap;}
+.create button {flex:1 100%; margin:0}
+.pbxcall [id^=related] {max-height: 300px;overflow-y: auto;}
+.pbxcall [id^=related] > *{display: block}
+.pbxcall hr { margin: 5px 20px; border: 1px transparent; border-top: 1px solid #bcd;}
+.forward-list {-webkit-appearance: menulist;}
+/*
+.forward-list {width:117px}
+.forwardto {width: 40px !important;}
+*/
+.forward {width: 7rem; height: 28px;}
+.info {cursor:pointer;transition:color .2s linear;font-weight: bold}
+.info:hover {color:tomato}
+.alert-success h4 {color:#468847}
+.alert-info h4 {color:#3a87ad}
+.alert-warning h4 {color:#c09853}
+
+.alert-success span {color:#264827 !important}
+.alert-info span {color:#1a476d !important}
+
+i.fa.fa-phone-square.pbx {
+  float: left;
+  font-size: 25px;
+  line-height: .8;
+  /*
+  color: hsla(0, 100%,100%,.8)
+  */
+}
+div#panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  margin: 2vmin;
+  font-family: Consolas, monospace;
+  box-shadow: 0 5px 15px #348;
+}
+div#panel.compact {
+  width: 8em;
+  height: 3em;
+  overflow: hidden
+}
+div#panel th { cursor: pointer }
+
+.extraClose {
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 17px;
+  opacity: .2;
+  transition: all .2s;
+}
+
+.extraClose:hover {
+  opacity: 1;
+}
+
+/* scroll */
+.vtCall::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.vtCall::-webkit-scrollbar-button {
+  width: 0px;
+  height: 0px;
+}
+.vtCall::-webkit-scrollbar-thumb {
+  background: #e1e1e1;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+.vtCall::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+}
+.vtCall::-webkit-scrollbar-thumb:active {
+  background: #000000;
+}
+.vtCall::-webkit-scrollbar-track {
+  background: #666666;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+.vtCall::-webkit-scrollbar-track:hover {
+  background: #666666;
+}
+.vtCall::-webkit-scrollbar-track:active {
+  background: #333333;
+}
+.vtCall::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* end scroll */
+

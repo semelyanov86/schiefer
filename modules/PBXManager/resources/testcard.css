@@ -1,0 +1,45 @@
+div.dial{
+  position: fixed;
+  bottom:0;
+  right:0;
+  padding:0;
+  margin: 70px 50px;
+  width:  80px;
+  height: 80px;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 5px #141;
+  cursor: pointer;
+  transition: all .3s ease;
+  animation: fadein 2s;
+  background: 
+    #4f2 
+    linear-gradient(125deg,hsla(0,0%,0%,0),#171)
+}
+
+div.dial svg {
+  fill: hsla(0,0%,100%,.9);
+  transform: scale(.7);
+  transition: all .3s ease;
+  transition-delay: .3s
+}
+
+div.dial:hover svg{transform: scale(.5) rotate(45deg);}
+
+div.dial:hover{box-shadow: 0 0 20px #141;}
+
+div.modal-body label{
+    text-align:right;
+    min-width:200px;
+    font-weight:bold;
+    color:#555;
+    display:inline-block;
+    padding-right:10px;
+}
+div.modal-body input {vertical-align: baseline;}
+
+@keyframes fadein {
+  0% {opacity: 0;}
+100% {opacity: 1;}
+}
+
