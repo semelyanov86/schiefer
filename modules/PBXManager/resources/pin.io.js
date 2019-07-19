@@ -68,7 +68,19 @@ var pinIO = function (options) {
             customertype: 'Contacts',
             callername: data.from,
             */
-        })
+        });
+        var link = 'https://scrm.schiefer.co/index.php?module=Contacts&view=List&viewname=7&app=MARKETING';
+        Push.create('Incoming call', {
+            body: data.from,
+            icon: '/icon.png',
+            link: link,
+            requireInteraction: false,
+            onClick: function () {
+                var win = window.open(link, '_blank');
+                win.focus();
+                this.close();
+            }
+        });
     }
 
     self.onHideCard = function (data) {

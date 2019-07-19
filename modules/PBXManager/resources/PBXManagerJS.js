@@ -761,7 +761,7 @@ var Vtiger_PBXManager_Js = {
         pbxid = record.pbxmanagerid,
         $crmdata = $container.find('.crmdata'),
         crmExtens = Object.keys(_.phoneList),
-        showCrm = false
+        showCrm = false;
 
       // external 1 - from
       if (PhoneA.length > _.maxLength) {
@@ -1719,6 +1719,7 @@ class V7ui {
 
   showCard (params) {
     // TODO v7org notify
+      console.log(params);
     return $.pnotify($.extend({
       sticker: false,
       delay: '3000',
