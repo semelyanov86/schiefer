@@ -169,9 +169,15 @@ class Products_MassActionAjax_View extends Vtiger_MassActionAjax_View {
             $productModel->set('mode', 'edit');
             $productModel->set('cf_1501', $qty);
             $diff = $productModel->tofloat($qty) - $productModel->get('qtyinstock');
-//            var_dump($diff, $productModel->get('qtyinstock'), $qty, str_replace('.', ',', $diff));die;
             $productModel->set('cf_1503', str_replace('.', ',', $diff));
             $productModel->save();
+            $inventurModel = Vtiger_Record_Model::getCleanInstance('Inventur');
+            $inventurModel->set('name', $productModel->getName());
+            $inventurModel->set('cf_products_id', $productModel->getId());
+            $inventurModel->set('cf_1528', $qty);
+            $inventurModel->set('cf_1530', $diff);
+            $inventurModel->set('mode', 'create');
+            $inventurModel->save();
         }
         return $productModel;
     }
