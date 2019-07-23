@@ -43,10 +43,7 @@ Vtiger_List_Js("Products_List_Js", {
             };
             app.request.post(params).then(
                 function (err,data) {
-/*                    var newdata = $.map(data, function(dataItem) {
-                        return { value: dataItem.value, data: dataItem.label };
-                    });*/
-                    console.log(data);
+
                     if(!err) {
                         jQuery('#Products_editView_fieldName_cf_1137').autocomplete({
                             source: data,
@@ -79,11 +76,10 @@ Vtiger_List_Js("Products_List_Js", {
             };
             app.request.post(params).then(
                 function (err,data) {
-                    console.log(data, err);
                     if(!err) {
-                        document.getElementById('kuddenresult').innerText = 'Kundenname: ' + data;
+                        document.getElementById('kuddenresult').innerHTML = 'Kundenname: ' + data;
                     } else {
-                        document.getElementById('kuddenresult').innerText = 'Error: ' + err.message;
+                        document.getElementById('kuddenresult').innerHTML = 'Error: ' + err.message;
                     }
                 },
                 function (data, err) {
@@ -125,7 +121,6 @@ Vtiger_List_Js("Products_List_Js", {
                                                     trobj.find('[data-name="cf_1503"]').find('.value').html(data.cf_1503);
                                                 }
 
-                                                // app.helper.hideModal();
                                             } else {
                                                 app.helper.showSuccessNotification({'title': 'Error', 'message': err.message});
                                                 // app.helper.showErrorMessage(err.message);
