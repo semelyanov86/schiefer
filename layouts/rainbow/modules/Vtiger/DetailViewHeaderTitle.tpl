@@ -30,7 +30,26 @@
 			<div class="recordBasicInfo">
 				<div class="info-row">
 					<h4>
-						<span class="recordLabel pushDown" title="{$RECORD->getName()}">
+						{if $MODULE == 'Contacts'}
+							<span class="recordLabel  pushDown" title="{$RECORD->getDisplayValue('salutationtype')}&nbsp;{$RECORD->getName()}">
+					  <a href="http://sams.schiefer.co/kunden/{$RECORD->get('cf_1137')}" target="_blank">
+					 {assign var=COUNTER value=0}
+						  {foreach item=NAME_FIELD from=$MODULE_MODEL->getNameFields()}
+							  {assign var=FIELD_MODEL value=$MODULE_MODEL->getField($NAME_FIELD)}
+							  {if $FIELD_MODEL->getPermissions()}
+								  <span class="{$NAME_FIELD}">
+							   {if $RECORD->getDisplayValue('salutationtype') && $FIELD_MODEL->getName() eq 'firstname'}
+								   {$RECORD->getDisplayValue('salutationtype')}&nbsp;
+							   {/if}
+									  {trim($RECORD->get($NAME_FIELD))}
+						   </span>
+								  {if $COUNTER eq 0 && ($RECORD->get($NAME_FIELD))}&nbsp;{assign var=COUNTER value=$COUNTER+1}{/if}
+							  {/if}
+						  {/foreach}
+					  </a>
+				  </span>
+						{else}
+							<span class="recordLabel pushDown" title="{$RECORD->getName()}">
 							{foreach item=NAME_FIELD from=$MODULE_MODEL->getNameFields()}
 								{assign var=FIELD_MODEL value=$MODULE_MODEL->getField($NAME_FIELD)}
 								{if $FIELD_MODEL->getPermissions()}
@@ -38,6 +57,7 @@
 								{/if}
 							{/foreach}
 						</span>
+						{/if}
 					</h4>
 				</div>
 				{include file="DetailViewHeaderFieldsView.tpl"|vtemplate_path:$MODULE}
