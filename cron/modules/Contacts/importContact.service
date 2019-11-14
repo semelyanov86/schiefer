@@ -18,71 +18,78 @@ $configs = include('modules/Contacts/config.php');
 $numericFields = array('cf_1109', 'cf_1127', 'cf_1113', 'cf_1121', 'cf_1115', 'cf_1119', 'cf_1117', 'cf_1123', 'cf_1125');
 $excludeFields = array('lastname', 'firstname', 'description', 'mailingstreet', 'mailingcity', 'phone', 'mailingzip', 'email');
 $date = date('d-m-Y');
-$dos2unix = exec("dos2unix -iso -n import/" . $date . ".txt storage/" . $date . ".txt");
-$dataString = file_get_contents_utf8("storage/$date.txt");
-if ($dataString) {
-    $textArr = splitDocument($dataString);
-    $current_user = CRMEntity::getInstance('Users');
-    $current_user->retrieveCurrentUserInfoFromFile(1);
-    foreach ($textArr as $text) {
-        if (!$configs[1] || empty($configs[1])) {
-            continue;
-        }
-        try {
-            $tmpval = $text[0];
-            $q = "SELECT * FROM Contacts WHERE $configs[0] = '$tmpval'";
-            $q = $q . ';'; // NOTE: Make sure to terminate query with ;
-            $records = vtws_query($q, $current_user);
-            if (count($records) > 0) {
-                $wsid = $records[0]['id'];
-            } else {
-                $wsid = false;
+for ($i = 0; $i <= 10; $i++) {
+    $filename = $i . '-' . $date . '.txt';
+    if (!file_exists('import/' . $filename)) {
+        continue;
+    }
+    $dos2unix = exec("dos2unix -iso -n import/" . $filename . " storage/" . $date . ".txt");
+    $dataString = file_get_contents_utf8("storage/$date.txt");
+    if ($dataString) {
+        $textArr = splitDocument($dataString);
+        $current_user = CRMEntity::getInstance('Users');
+        $current_user->retrieveCurrentUserInfoFromFile(1);
+        foreach ($textArr as $text) {
+            if (!$configs[1] || empty($configs[1])) {
+                continue;
             }
-        } catch (WebServiceException $ex) {
-            var_dump($ex->getMessage(), $q);
-        }
-        if ($wsid) {
             try {
-                $dataArr = array('id' => $wsid);
-                for ($i = 0; $i < count($configs); $i++) {
-                    if (in_array($configs[$i], $excludeFields)) {
-                        continue;
-                    }
-                    if (in_array($configs[$i], $numericFields)) {
+                $tmpval = $text[0];
+                $q = "SELECT * FROM Contacts WHERE $configs[0] = '$tmpval'";
+                $q = $q . ';'; // NOTE: Make sure to terminate query with ;
+                $records = vtws_query($q, $current_user);
+                if (count($records) > 0) {
+                    $wsid = $records[0]['id'];
+                } else {
+                    $wsid = false;
+                }
+            } catch (WebServiceException $ex) {
+                var_dump($ex->getMessage(), $q);
+            }
+            if ($wsid) {
+                try {
+                    $dataArr = array('id' => $wsid);
+                    for ($i = 0; $i < count($configs); $i++) {
+                        if (in_array($configs[$i], $excludeFields)) {
+                            continue;
+                        }
+                        if (in_array($configs[$i], $numericFields)) {
 //                        $tmpString = $text[$i];
-                        $tmpString = str_replace('.', '', $text[$i]);
-                        $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
+                            $tmpString = str_replace('.', '', $text[$i]);
+                            $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
 //                        $dataArr[$configs[$i]] = $tmpString;
-                    } else {
-                        $dataArr[$configs[$i]] = $text[$i];
+                        } else {
+                            $dataArr[$configs[$i]] = $text[$i];
+                        }
                     }
+                    $contact = vtws_revise($dataArr, $current_user);
+                } catch (WebServiceException $ex) {
+                    var_dump($ex->getMessage(), $dataArr);
                 }
-                $contact = vtws_revise($dataArr, $current_user);
-            } catch (WebServiceException $ex) {
-                var_dump($ex->getMessage(), $dataArr);
-            }
-        } else {
-            try {
-                $dataArr = array('assigned_user_id' => '19x1');
-                for ($i = 0; $i < count($configs); $i++) {
-                    if (in_array($configs[$i], $numericFields)) {
-                        $tmpString = str_replace('.', '', $text[$i]);
-                        $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
+            } else {
+                try {
+                    $dataArr = array('assigned_user_id' => '19x1');
+                    for ($i = 0; $i < count($configs); $i++) {
+                        if (in_array($configs[$i], $numericFields)) {
+                            $tmpString = str_replace('.', '', $text[$i]);
+                            $dataArr[$configs[$i]] = str_replace(',', '.', $tmpString);
 //                        $dataArr[$configs[$i]] = $tmpString;
-                    } else {
-                        $dataArr[$configs[$i]] = $text[$i];
+                        } else {
+                            $dataArr[$configs[$i]] = $text[$i];
+                        }
                     }
+                    $contact = vtws_create('Contacts', $dataArr, $current_user);
+                } catch (WebServiceException $ex) {
+                    var_dump($ex->getMessage(), $dataArr);
                 }
-                $contact = vtws_create('Contacts', $dataArr, $current_user);
-            } catch (WebServiceException $ex) {
-                var_dump($ex->getMessage(), $dataArr);
             }
         }
     }
+    unlink('storage/' . $date . '.txt');
+    unlink('import/' . $filename);
+    echo 'DONE WITH ' . $filename;
+    break;
 }
-unlink('storage/' . $date . '.txt');
-echo 'DONE!';
-
 
 function splitDocument($text)
 {
